@@ -4,10 +4,10 @@ import pymysql
 import sys
 import signal
 import re
+import argparse
 
 from PyQt5.QtWidgets import QApplication
 from dibi.ui import UI
-import qtmodern.styles
 
 
 class Controller():
@@ -91,16 +91,27 @@ AND column_name = %s
 
 def dibi():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    p = argparse.ArgumentParser()
+    p.add_argument('--host')
+    p.add_argument('--user', '-u')
+    p.add_argument('--password', '-p')
+    p.add_argument('--port', '-P', type=int, default=3306)
+    args = p.parse_args()
     c = pymysql.connect(
-        host='127.0.0.1',
-        user='',
-        password='',
-        # database='',
+        host=args.host,
+        user=args.user,
+        password=args.password,
+        port=args.port,
         cursorclass=pymysql.cursors.DictCursor
     )
     try:
         app = QApplication(sys.argv)
-        qtmodern.styles.dark(app)
+        try:
+            app.setStyle('crap')
+        except Exception as err:
+            print(err)
+            pass
+        # qtmodern.styles.dark(app)
         widget = UI(Controller(c))
         widget.show()
         sys.exit(app.exec_())

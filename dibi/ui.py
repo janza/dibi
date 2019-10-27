@@ -2,7 +2,7 @@ from typing import Dict
 from os.path import commonprefix
 
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QLabel, QListView, QMainWindow, QItemDelegate
-from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QObject, QEvent, QMargins, QSize
+from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QSize
 import PyQt5.QtGui
 
 
@@ -40,9 +40,7 @@ class UI(QWidget):
         self.layout = QVBoxLayout()
         self.setObjectName('mainbox')
 
-        self.setStyleSheet('''
-            font-family: monospace;
-        ''')
+        self.setStyleSheet('font-family: monospace;')
 
         self.log_text = QLabel('Initalized' + ('\n' * 4))
         self.log_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -68,14 +66,12 @@ class UI(QWidget):
 
         self.list = QListView()
         self.list.setAlternatingRowColors(True)
-        self.list.setStyleSheet('alternate-background-color: #333')
         self.list.setItemDelegate(ItemDelegate(self.list))
         self.list.setModel(self.db_list)
         self.list.setMaximumWidth(200)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
         self.tablelist = QListView()
-        self.tablelist.setStyleSheet('alternate-background-color: #333')
         self.tablelist.setItemDelegate(ItemDelegate(self.tablelist))
         self.tablelist.setAlternatingRowColors(True)
         self.tablelist.setModel(self.table_list)
