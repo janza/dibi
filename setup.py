@@ -14,7 +14,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'PyQt5',
-        'PyMySQL'
+        'PyMySQL',
         'dibi'
     ],
     entry_points={
