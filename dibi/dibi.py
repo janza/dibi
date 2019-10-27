@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-import pymysql
 import sys
 import signal
 import re
 import argparse
 
+import MySQLdb
+import MySQLdb.cursors
 from PyQt5.QtWidgets import QApplication
 from dibi.ui import UI
 
@@ -52,7 +53,7 @@ class Controller():
             return cursor
 
     def get_db_list(self):
-        with self.c.cursor(pymysql.cursors.Cursor) as cursor:
+        with self.c.cursor(MySQLdb.cursors.Cursor) as cursor:
             cursor.execute('show databases')
             return [db[0] for db in cursor]
 
@@ -78,7 +79,7 @@ AND column_name = %s
         except Exception:
             pass
 
-        with self.c.cursor(pymysql.cursors.Cursor) as cursor:
+        with self.c.cursor(MySQLdb.cursors.Cursor) as cursor:
             if db is None:
                 cursor.execute('show tables')
             else:
@@ -92,17 +93,17 @@ AND column_name = %s
 def dibi():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     p = argparse.ArgumentParser()
-    p.add_argument('--host')
-    p.add_argument('--user', '-u')
-    p.add_argument('--password', '-p')
+    p.add_argument('--host', required=True)
+    p.add_argument('--user', '-u', required=True)
+    p.add_argument('--password', '-p', required=True)
     p.add_argument('--port', '-P', type=int, default=3306)
     args = p.parse_args()
-    c = pymysql.connect(
+    c = MySQLdb.connect(
         host=args.host,
         user=args.user,
         password=args.password,
         port=args.port,
-        cursorclass=pymysql.cursors.DictCursor
+        cursorclass=MySQLdb.cursors.DictCursor
     )
     try:
         app = QApplication(sys.argv)
