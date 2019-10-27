@@ -1,8 +1,9 @@
 from typing import Dict
 from os.path import commonprefix
 
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QLabel, QListView, QMainWindow
-from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QObject, QEvent, QMargins
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QLabel, QListView, QMainWindow, QItemDelegate
+from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QObject, QEvent, QMargins, QSize
+import PyQt5.QtGui
 
 
 class ListViewModel(QAbstractListModel):
@@ -27,12 +28,21 @@ class ListViewModel(QAbstractListModel):
         return QVariant()
 
 
+class ItemDelegate(QItemDelegate):
+    def sizeHint(self, yes, no):
+        return QSize(0, 26)
+
+
 class UI(QWidget):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-
         self.layout = QVBoxLayout()
+        self.setObjectName('mainbox')
+
+        self.setStyleSheet('''
+            font-family: monospace;
+        ''')
 
         self.log_text = QLabel('Initalized' + ('\n' * 4))
         self.log_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -41,13 +51,14 @@ class UI(QWidget):
         self.textbox.returnPressed.connect(self.on_enter)
 
         self.layout = QVBoxLayout()
+        self.layout.setObjectName('ui')
         self.bottom = QWidget()
 
         self.bottom_layout = QHBoxLayout()
         self.bottom_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.bottom.setLayout(self.bottom_layout)
 
-        self.table = Table()
+        self.table = Table(self.controller)
 
         self.db_list = ListViewModel(controller.get_db_list())
         try:
@@ -56,11 +67,17 @@ class UI(QWidget):
             self.table_list = ListViewModel([])
 
         self.list = QListView()
+        self.list.setAlternatingRowColors(True)
+        self.list.setStyleSheet('alternate-background-color: #333')
+        self.list.setItemDelegate(ItemDelegate(self.list))
         self.list.setModel(self.db_list)
         self.list.setMaximumWidth(200)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
         self.tablelist = QListView()
+        self.tablelist.setStyleSheet('alternate-background-color: #333')
+        self.tablelist.setItemDelegate(ItemDelegate(self.tablelist))
+        self.tablelist.setAlternatingRowColors(True)
         self.tablelist.setModel(self.table_list)
         self.tablelist.setMaximumWidth(200)
         self.tablelist.doubleClicked.connect(self.on_tablename_dbl_click)
@@ -128,9 +145,7 @@ class UI(QWidget):
             try:
                 tables = self.get_table_list(db_name)
             except Exception as err:
-                print(err)
                 tables = self.table_list._data
-            print(tables)
             candidates += [db_name + '.' + table + ' ' for table in tables]
         else:
             candidates += [table + ' ' for table in self.table_list._data]
@@ -170,11 +185,9 @@ class UI(QWidget):
 
     @pyqtSlot()
     def on_tablename_dbl_click(self):
-        print('ok')
         selection = self.tablelist.selectedIndexes()[0]
         try:
             selected_table = self.table_list.get(selection)
-            print(selected_table)
             self.set_data(self.controller.text_update(
                 'select * from `{}`'.format(selected_table)))
         except Exception as err:
@@ -207,9 +220,12 @@ class TableItem(QTableWidgetItem):
 
 
 class Table(QTableWidget):
-    def __init__(self):
+    def __init__(self, controller):
         super().__init__()
-        self.doubleClicked.connect(self.on_click)
+        self.controller = controller
+        self.doubleClicked.connect(self.on_dbl_click)
+        self.cellClicked.connect(self.on_click)
+        self.setStyleSheet('font-family: sans')
 
     def set_data(self, data: Dict[str, Dict]):
         if type(data) != list:
@@ -236,6 +252,21 @@ class Table(QTableWidget):
 
     @pyqtSlot()
     def on_click(self):
-        print("\n")
-        for item in self.selectedItems():
-            print(item.row(), item.column(), item.record)
+        modifiers = PyQt5.QtGui.QGuiApplication.queryKeyboardModifiers()
+        if modifiers != Qt.AltModifier:
+            return
+        selected = self.selectedItems()
+        for item in selected:
+            try:
+                referenced_data = self.controller.get_reference(item.column_name, item.record[item.column_name])
+                if referenced_data:
+                    self.set_data(referenced_data)
+            except Exception as err:
+                print(err)
+        return True
+
+    @pyqtSlot()
+    def on_dbl_click(self):
+        pass
+        # for item in self.selectedItems():
+        #     print(item.row(), item.column(), item.record)
