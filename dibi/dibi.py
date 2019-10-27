@@ -6,6 +6,8 @@ import signal
 
 from PyQt5.QtWidgets import QApplication
 from dibi.ui import UI
+import qtmodern.styles
+import qtmodern.windows
 
 
 class Controller():
@@ -53,6 +55,7 @@ def dibi():
     )
     try:
         app = QApplication(sys.argv)
+        qtmodern.styles.dark(app)
         data = [
             {"ok": 1, "nok": 2},
             {"ok": 1, "nok": 2},
