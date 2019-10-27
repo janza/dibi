@@ -108,7 +108,7 @@ def dibi():
     try:
         app = QApplication(sys.argv)
         try:
-            app.setStyle('crap')
+            app.setStyle('Fusion')
         except Exception as err:
             print(err)
             pass
