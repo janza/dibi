@@ -7,8 +7,8 @@ import PyQt5.QtGui
 
 
 class ListViewModel(QAbstractListModel):
-    def __init__(self, data):
-        super().__init__()
+    def __init__(self, data, parent):
+        super().__init__(parent=parent)
         self._data = data
 
     def rowCount(self, ok):
@@ -44,34 +44,34 @@ class UI(QWidget):
 
         self.log_text = QLabel('Initalized' + ('\n' * 4))
         self.log_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.textbox = QLineEdit()
+        self.textbox = QLineEdit(parent=self)
         self.textbox.installEventFilter(self)
         self.textbox.returnPressed.connect(self.on_enter)
 
         self.layout = QVBoxLayout()
         self.layout.setObjectName('ui')
-        self.bottom = QWidget()
+        self.bottom = QWidget(parent=self)
 
         self.bottom_layout = QHBoxLayout()
         self.bottom_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.bottom.setLayout(self.bottom_layout)
 
-        self.table = Table(self.controller)
+        self.table = Table(self.controller, parent=self)
 
-        self.db_list = ListViewModel(controller.get_db_list())
+        self.db_list = ListViewModel(controller.get_db_list(), parent=self)
         try:
-            self.table_list = ListViewModel(controller.get_table_list())
+            self.table_list = ListViewModel(controller.get_table_list(), parent=self)
         except Exception:
-            self.table_list = ListViewModel([])
+            self.table_list = ListViewModel([], parent=self)
 
-        self.list = QListView()
+        self.list = QListView(parent=self)
         self.list.setAlternatingRowColors(True)
         self.list.setItemDelegate(ItemDelegate(self.list))
         self.list.setModel(self.db_list)
         self.list.setMaximumWidth(200)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
-        self.tablelist = QListView()
+        self.tablelist = QListView(parent=self)
         self.tablelist.setItemDelegate(ItemDelegate(self.tablelist))
         self.tablelist.setAlternatingRowColors(True)
         self.tablelist.setModel(self.table_list)
@@ -139,8 +139,9 @@ class UI(QWidget):
         if '.' in word:
             db_name = word.split('.')[0]
             try:
-                tables = self.get_table_list(db_name)
+                tables = self.get_table_list(db_name) or []
             except Exception as err:
+                print(err)
                 tables = self.table_list._data
             candidates += [db_name + '.' + table + ' ' for table in tables]
         else:
@@ -164,8 +165,9 @@ class UI(QWidget):
         selection = self.list.selectedIndexes()[0]
         try:
             db = self.db_list.get(selection)
-            self.controller.text_update(
-                'use `{}`'.format(db))
+            query = 'use `{}`'.format(db)
+            self.append_to_status(query)
+            self.controller.text_update(query)
         except Exception as err:
             self.append_to_status(str(err))
         self.get_table_list(db)
@@ -173,7 +175,7 @@ class UI(QWidget):
     def get_table_list(self, db):
         try:
             tables = self.controller.get_table_list(db)
-            self.table_list = ListViewModel(tables)
+            self.table_list = ListViewModel(tables, parent=self)
             self.tablelist.setModel(self.table_list)
             return tables
         except Exception as err:
@@ -184,8 +186,9 @@ class UI(QWidget):
         selection = self.tablelist.selectedIndexes()[0]
         try:
             selected_table = self.table_list.get(selection)
-            self.set_data(self.controller.text_update(
-                'select * from `{}`'.format(selected_table)))
+            query = 'select * from `{}`'.format(selected_table)
+            self.append_to_status(query)
+            self.set_data(self.controller.text_update(query))
         except Exception as err:
             self.append_to_status(str(err))
 
@@ -216,11 +219,12 @@ class TableItem(QTableWidgetItem):
 
 
 class Table(QTableWidget):
-    def __init__(self, controller):
-        super().__init__()
+    def __init__(self, controller, parent):
+        super().__init__(parent=parent)
         self.controller = controller
         self.doubleClicked.connect(self.on_dbl_click)
         self.cellClicked.connect(self.on_click)
+        self.cellChanged.connect(self.on_change)
         self.setStyleSheet('font-family: sans')
 
     def set_data(self, data: Dict[str, Dict]):
@@ -245,6 +249,15 @@ class Table(QTableWidget):
                 self.setItem(row, col, TableItem(column_name, item))
 
         self.resizeColumnsToContents()
+
+    @pyqtSlot()
+    def on_change(self):
+        for item in self.selectedItems():
+            try:
+                self.controller.update_record(item.record, item.column_name, item.data(0))
+            except Exception as err:
+                print('ERROR')
+                print(err)
 
     @pyqtSlot()
     def on_click(self):

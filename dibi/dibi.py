@@ -47,12 +47,44 @@ class Controller():
                 self.current_db = db
             if table:
                 self.current_table = table
-
         return query
+
+    def update_record(self, record, column_name, value):
+        if not self.current_table:
+            return None
+        with self.c.cursor() as cursor:
+            cursor.execute('show index from `{}` where non_unique = false or key_name="primary"'.format(self.current_table))
+
+            rows = cursor.fetchall()
+            index = []
+            for row in rows:
+                if row['Key_name'].lower() == 'primary':
+                    index.append(row['Column_name'])
+            if not index:
+                name = None
+                for row in rows:
+                    if name is None:
+                        name = row['Key_name']
+                    if row['Key_name'].lower() == name:
+                        index.append(row['Column_name'])
+            if column_name in index:
+                raise Exception('Can\'t update index column')
+            cursor.execute(
+                'update `{}` set `{}` = %s where {}'.format(
+                    self.current_table, column_name, ' AND '.join([
+                        '{} = %s'.format(i) for i in index
+                    ])), (value,) + tuple([record[i] for i in index]))
+        self.c.commit()
+
+    def split_queries(self, queries):
+        for query in queries.split(';'):
+            if query.strip():
+                yield self.prepare_query(query)
 
     def text_update(self, text, params=None):
         with self.c.cursor() as cursor:
-            cursor.execute(self.prepare_query(text), params)
+            for query in self.split_queries(text):
+                cursor.execute(text, params)
             return cursor
 
     def get_db_list(self):
@@ -91,7 +123,7 @@ AND column_name = %s
             if db is None:
                 cursor.execute('show tables')
             else:
-                cursor.execute('show tables in {}'.format(db))
+                cursor.execute('show tables in `{}`'.format(db))
             tables = [table[0] for table in cursor]
             if db is not None:
                 self.table_cache[db] = tables
@@ -113,13 +145,13 @@ def dibi():
         port=args.port,
         cursorclass=MySQLdb.cursors.DictCursor
     )
-    try:
-        app = QApplication(sys.argv)
-        widget = UI(Controller(c))
-        widget.show()
-        sys.exit(app.exec_())
-    finally:
-        c.close()
+
+    app = QApplication(sys.argv)
+    widget = UI(Controller(c))
+    widget.show()
+    return_code = app.exec_()
+    c.close()
+    sys.exit(return_code)
 
 
 if __name__ == "__main__":
