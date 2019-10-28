@@ -37,19 +37,22 @@ class Controller():
             return None
         return m.groups()[0]
 
+    def prepare_query(self, query):
+        if query[:3].lower() == 'use':
+            self.current_db = self.get_db_from_use(query)
+        elif query[:6].lower() == 'select':
+            query += ' LIMIT 100'
+            db, table = self.get_table_from_query(query)
+            if db:
+                self.current_db = db
+            if table:
+                self.current_table = table
+
+        return query
+
     def text_update(self, text, params=None):
         with self.c.cursor() as cursor:
-            if text[:3].lower() == 'use':
-                self.current_db = self.get_db_from_use(text)
-            elif text[:6].lower() == 'select':
-                text += ' LIMIT 100'
-                db, table = self.get_table_from_query(text)
-                if db:
-                    self.current_db = db
-                if table:
-                    self.current_table = table
-
-            cursor.execute(text, params)
+            cursor.execute(self.prepare_query(text), params)
             return cursor
 
     def get_db_list(self):
@@ -67,11 +70,16 @@ AND referenced_column_name is not null
 AND table_name = %s
 AND column_name = %s
             ''', (self.current_db, self.current_table, column))
-            for row in cursor:
-                return self.text_update('select * from `'+row['referenced_table_name']+'` where `'+row['referenced_column_name']+'` = %s', (
-                    value
-                ))
-            return None
+            try:
+                row = cursor.fetchone()
+            except Exception as err:
+                print('Error finding reference', err)
+                return None
+            if row is None:
+                return None
+            query = self.prepare_query('select * from `'+row['referenced_table_name']+'` where `'+row['referenced_column_name']+'` = %s')
+            cursor.execute(query, (value, ))
+            return cursor
 
     def get_table_list(self, db):
         try:
@@ -107,12 +115,6 @@ def dibi():
     )
     try:
         app = QApplication(sys.argv)
-        try:
-            app.setStyle('Fusion')
-        except Exception as err:
-            print(err)
-            pass
-        # qtmodern.styles.dark(app)
         widget = UI(Controller(c))
         widget.show()
         sys.exit(app.exec_())

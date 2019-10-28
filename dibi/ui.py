@@ -90,7 +90,7 @@ class UI(QWidget):
         self.history_cursor = 0
         self.history = []
 
-    def append_to_status(self, text):
+    def append_to_status(self, text: str):
         lines = self.log_text.text().split('\n')
         lines.append(text)
         self.log_text.setText('\n'.join(lines[-5:]))
@@ -101,7 +101,7 @@ class UI(QWidget):
         if hl > 0:
             self.textbox.setText(self.history[self.history_cursor % hl])
 
-    def eventFilter(self, source, event):
+    def eventFilter(self, source, event: QEvent):
         if event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Tab:
                 self.autocomplete()
@@ -255,7 +255,7 @@ class Table(QTableWidget):
         for item in selected:
             try:
                 referenced_data = self.controller.get_reference(item.column_name, item.record[item.column_name])
-                if referenced_data:
+                if referenced_data is not None:
                     self.set_data(referenced_data)
             except Exception as err:
                 print(err)
