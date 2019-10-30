@@ -2,6 +2,8 @@
 
 Lightweight GUI for MySQL with performance in mind
 
+![Screenshot](https://raw.githubusercontent.com/janza/dibi/master/static/screenshot.png)
+
 ## Todo
 
 - [x] Commit/Rollback
