@@ -90,6 +90,7 @@ class UI(QWidget):
         self.tablelist.setModel(self.table_list)
         self.tablelist.setMaximumWidth(200)
         self.tablelist.doubleClicked.connect(self.on_tablename_dbl_click)
+        self.tablelist.clicked.connect(self.on_tablename_click)
 
         self.bottom_layout.addWidget(self.list)
         self.bottom_layout.addWidget(self.tablelist)
@@ -209,6 +210,18 @@ class UI(QWidget):
             self.append_to_status(str(err))
 
     @pyqtSlot()
+    def on_tablename_click(self):
+        modifiers = PyQt5.QtGui.QGuiApplication.queryKeyboardModifiers()
+        if modifiers != Qt.AltModifier:
+            return
+        selection = self.tablelist.selectedIndexes()[0]
+        selected_table = self.table_list.get(selection)
+        try:
+            self.set_data(self.controller.columns(selected_table))
+        except Exception as err:
+            self.append_to_status(str(err))
+
+    @pyqtSlot()
     def on_tablename_dbl_click(self):
         selection = self.tablelist.selectedIndexes()[0]
         try:
@@ -282,13 +295,12 @@ class Table(QTableWidget):
     def on_change(self):
         for item in self.selectedItems():
             try:
-                if item.data(0) != item.record[item.column_name]:
+                if item.column_name in item.record and item.data(0) != item.record[item.column_name]:
                     query = self.controller.update_record(item.record, item.column_name, item.data(0))
                     if query:
                         self.parent.append_to_status(query)
             except Exception as err:
-                print('ERROR')
-                print(err)
+                print('Failed to change a column', err)
 
     @pyqtSlot()
     def on_click(self):

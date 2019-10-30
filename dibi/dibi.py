@@ -83,6 +83,13 @@ class Controller():
     def rollback(self):
         self.c.rollback()
 
+    def columns(self, table):
+        with self.c.cursor() as cursor:
+            if not self.current_db:
+                return None
+            cursor.execute('show columns in `{}`'.format(table))
+            return cursor
+
     def split_queries(self, queries):
         for query in queries.split(';'):
             if query.strip():
