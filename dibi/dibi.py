@@ -69,12 +69,19 @@ class Controller():
                         index.append(row['Column_name'])
             if column_name in index:
                 raise Exception('Can\'t update index column')
-            cursor.execute(
-                'update `{}` set `{}` = %s where {}'.format(
-                    self.current_table, column_name, ' AND '.join([
-                        '{} = %s'.format(i) for i in index
-                    ])), (value,) + tuple([record[i] for i in index]))
+            query = 'update `{}` set `{}` = %s where {}'.format(
+                self.current_table, column_name, ' AND '.join([
+                    '{} = %s'.format(i) for i in index
+                ]))
+            params = (value,) + tuple([record[i] for i in index])
+            cursor.execute(query, params)
+            return query % params
+
+    def commit(self):
         self.c.commit()
+
+    def rollback(self):
+        self.c.rollback()
 
     def split_queries(self, queries):
         for query in queries.split(';'):
@@ -84,7 +91,8 @@ class Controller():
     def text_update(self, text, params=None):
         with self.c.cursor() as cursor:
             for query in self.split_queries(text):
-                cursor.execute(text, params)
+                if query.strip():
+                    cursor.execute(query, params)
             return cursor
 
     def get_db_list(self):

@@ -1,7 +1,17 @@
 from typing import Dict
 from os.path import commonprefix
 
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QLabel, QListView, QMainWindow, QItemDelegate
+from PyQt5.QtWidgets import QTableWidget,\
+    QTableWidgetItem,\
+    QHBoxLayout,\
+    QVBoxLayout,\
+    QWidget,\
+    QLineEdit,\
+    QLabel,\
+    QListView,\
+    QMainWindow,\
+    QItemDelegate,\
+    QPushButton
 from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QSize
 import PyQt5.QtGui
 
@@ -37,7 +47,6 @@ class UI(QWidget):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.layout = QVBoxLayout()
         self.setObjectName('mainbox')
 
         self.setStyleSheet('font-family: monospace;')
@@ -49,7 +58,11 @@ class UI(QWidget):
         self.textbox.returnPressed.connect(self.on_enter)
 
         self.layout = QVBoxLayout()
-        self.layout.setObjectName('ui')
+        text_and_button = QHBoxLayout()
+        commit = QPushButton("Commit")
+        commit.clicked.connect(self.on_commit_click)
+        rollback = QPushButton("Rollback")
+        rollback.clicked.connect(self.on_rollback_click)
         self.bottom = QWidget(parent=self)
 
         self.bottom_layout = QHBoxLayout()
@@ -83,7 +96,11 @@ class UI(QWidget):
         self.bottom_layout.addWidget(self.table)
 
         self.layout.addWidget(self.log_text)
-        self.layout.addWidget(self.textbox)
+        text_and_button.addWidget(self.textbox)
+        text_and_button.addWidget(commit)
+        text_and_button.addWidget(rollback)
+        self.layout.addLayout(text_and_button)
+
         self.layout.addWidget(self.bottom)
         self.setLayout(self.layout)
 
@@ -161,6 +178,16 @@ class UI(QWidget):
         self.textbox.setCursorPosition(len(before_cursor))
 
     @pyqtSlot()
+    def on_commit_click(self):
+        self.append_to_status('COMMIT')
+        self.controller.commit()
+
+    @pyqtSlot()
+    def on_rollback_click(self):
+        self.append_to_status('ROLLBACK')
+        self.controller.rollback()
+
+    @pyqtSlot()
     def on_list_dbl_click(self):
         selection = self.list.selectedIndexes()[0]
         try:
@@ -222,6 +249,7 @@ class Table(QTableWidget):
     def __init__(self, controller, parent):
         super().__init__(parent=parent)
         self.controller = controller
+        self.parent = parent
         self.doubleClicked.connect(self.on_dbl_click)
         self.cellClicked.connect(self.on_click)
         self.cellChanged.connect(self.on_change)
@@ -254,7 +282,10 @@ class Table(QTableWidget):
     def on_change(self):
         for item in self.selectedItems():
             try:
-                self.controller.update_record(item.record, item.column_name, item.data(0))
+                if item.data(0) != item.record[item.column_name]:
+                    query = self.controller.update_record(item.record, item.column_name, item.data(0))
+                    if query:
+                        self.parent.append_to_status(query)
             except Exception as err:
                 print('ERROR')
                 print(err)
