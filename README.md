@@ -8,6 +8,7 @@ Lightweight MySQL GUI client with performance in mind
 
 - [x] Commit/Rollback
 - [x] List columns of a table
+- [ ] Documentation
 - [ ] Better gfx
 - [ ] Better single value editing experience
 - [ ] Export results
