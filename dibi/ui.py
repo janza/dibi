@@ -7,13 +7,14 @@ from PyQt5.QtWidgets import QTableWidget,\
     QVBoxLayout,\
     QWidget,\
     QLineEdit,\
-    QLabel,\
+    QTextEdit, \
     QListView,\
     QMainWindow,\
     QItemDelegate,\
+    QSizePolicy,\
     QPushButton
-from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QSize
-import PyQt5.QtGui
+from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QSize, QPropertyAnimation
+from PyQt5.QtGui import QGuiApplication, QTextCursor
 
 
 class ListViewModel(QAbstractListModel):
@@ -39,8 +40,9 @@ class ListViewModel(QAbstractListModel):
 
 
 class ItemDelegate(QItemDelegate):
-    def sizeHint(self, yes, no):
-        return QSize(0, 26)
+    pass
+    # def sizeHint(self, yes, no):
+    #     return QSize(100, 26)
 
 
 class UI(QWidget):
@@ -48,28 +50,47 @@ class UI(QWidget):
         super().__init__()
         self.controller = controller
         self.setObjectName('mainbox')
+        self.db_list_open = True
 
-        self.setStyleSheet('font-family: monospace;')
-
-        self.log_text = QLabel('Initalized' + ('\n' * 4))
-        self.log_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        # self.setStyleSheet('border-width: 0; padding: 0; margin: 0')
+        self.log_text = QTextEdit('Initalized' + ('\n' * 4))
+        # self.log_text.setWordWrap(True)
+        self.log_text.setReadOnly(True)
+        self.log_text.setMaximumHeight(100)
+        self.log_text.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+        # self.log_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.textbox = QLineEdit(parent=self)
         self.textbox.installEventFilter(self)
         self.textbox.returnPressed.connect(self.on_enter)
 
         self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        self.layout.setSpacing(0)
+
+        self.top = QWidget(parent=self)
+        self.top.setObjectName('top')
+        self.top_layout = QVBoxLayout()
+        self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
+        text_and_button.setSpacing(0)
         commit = QPushButton("Commit")
+        commit.setObjectName('commit-btn')
+        commit.setCursor(Qt.PointingHandCursor)
         commit.clicked.connect(self.on_commit_click)
         rollback = QPushButton("Rollback")
+        rollback.setObjectName('rollback-btn')
+        rollback.setCursor(Qt.PointingHandCursor)
         rollback.clicked.connect(self.on_rollback_click)
         self.bottom = QWidget(parent=self)
+        self.bottom.setObjectName('bottom')
 
         self.bottom_layout = QHBoxLayout()
+        self.bottom_layout.setSpacing(0)
         self.bottom_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.bottom.setLayout(self.bottom_layout)
 
         self.table = Table(self.controller, parent=self)
+        self.table.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 
         self.db_list = ListViewModel(controller.get_db_list(), parent=self)
         try:
@@ -78,16 +99,18 @@ class UI(QWidget):
             self.table_list = ListViewModel([], parent=self)
 
         self.list = QListView(parent=self)
-        self.list.setAlternatingRowColors(True)
-        self.list.setItemDelegate(ItemDelegate(self.list))
+        self.list.setObjectName('db_list')
+        self.list.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.MinimumExpanding)
+        # self.list.setMinimumSize(50)
         self.list.setModel(self.db_list)
         self.list.setMaximumWidth(200)
+        self.list.clicked.connect(self.on_list_click)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
         self.tablelist = QListView(parent=self)
-        self.tablelist.setItemDelegate(ItemDelegate(self.tablelist))
-        self.tablelist.setAlternatingRowColors(True)
+        self.tablelist.setObjectName('table_list')
         self.tablelist.setModel(self.table_list)
+        self.tablelist.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.MinimumExpanding)
         self.tablelist.setMaximumWidth(200)
         self.tablelist.doubleClicked.connect(self.on_tablename_dbl_click)
         self.tablelist.clicked.connect(self.on_tablename_click)
@@ -96,12 +119,13 @@ class UI(QWidget):
         self.bottom_layout.addWidget(self.tablelist)
         self.bottom_layout.addWidget(self.table)
 
-        self.layout.addWidget(self.log_text)
+        self.top_layout.addWidget(self.log_text)
         text_and_button.addWidget(self.textbox)
         text_and_button.addWidget(commit)
         text_and_button.addWidget(rollback)
-        self.layout.addLayout(text_and_button)
+        self.top_layout.addLayout(text_and_button)
 
+        self.layout.addWidget(self.top)
         self.layout.addWidget(self.bottom)
         self.setLayout(self.layout)
 
@@ -109,9 +133,10 @@ class UI(QWidget):
         self.history = []
 
     def append_to_status(self, text: str):
-        lines = self.log_text.text().split('\n')
+        lines = self.log_text.toPlainText().split('\n')
         lines.append(text)
-        self.log_text.setText('\n'.join(lines[-5:]))
+        self.log_text.setPlainText('\n'.join(lines))
+        self.log_text.moveCursor(QTextCursor.End)
 
     def prev_command(self):
         self.history_cursor -= 1
@@ -189,6 +214,10 @@ class UI(QWidget):
         self.controller.rollback()
 
     @pyqtSlot()
+    def on_list_click(self):
+        self.open_db_list()
+
+    @pyqtSlot()
     def on_list_dbl_click(self):
         selection = self.list.selectedIndexes()[0]
         try:
@@ -199,6 +228,8 @@ class UI(QWidget):
         except Exception as err:
             self.append_to_status(str(err))
         self.get_table_list(db)
+        # self.close_db_list()
+        # return False
 
     def get_table_list(self, db):
         try:
@@ -211,7 +242,7 @@ class UI(QWidget):
 
     @pyqtSlot()
     def on_tablename_click(self):
-        modifiers = PyQt5.QtGui.QGuiApplication.queryKeyboardModifiers()
+        modifiers = QGuiApplication.queryKeyboardModifiers()
         if modifiers != Qt.AltModifier:
             return
         selection = self.tablelist.selectedIndexes()[0]
@@ -220,6 +251,26 @@ class UI(QWidget):
             self.set_data(self.controller.columns(selected_table))
         except Exception as err:
             self.append_to_status(str(err))
+
+    def open_db_list(self):
+        if self.db_list_open:
+            return
+        self.db_list_open = True
+        self.anim = QPropertyAnimation(self.list, b'maximumWidth')
+        self.anim.setDuration(150)
+        # self.anim.setStartValue(30)
+        self.anim.setEndValue(200)
+        self.anim.start()
+
+    def close_db_list(self):
+        if not self.db_list_open:
+            return
+        self.db_list_open = False
+        self.anim = QPropertyAnimation(self.list, b'maximumWidth')
+        self.anim.setDuration(150)
+        # self.anim.setStartValue(200)
+        self.anim.setEndValue(30)
+        self.anim.start()
 
     @pyqtSlot()
     def on_tablename_dbl_click(self):
@@ -231,6 +282,7 @@ class UI(QWidget):
             self.set_data(self.controller.text_update(query))
         except Exception as err:
             self.append_to_status(str(err))
+        self.close_db_list()
 
     @pyqtSlot()
     def on_enter(self):
@@ -263,10 +315,16 @@ class Table(QTableWidget):
         super().__init__(parent=parent)
         self.controller = controller
         self.parent = parent
+        self.setShowGrid(False)
+        self.setCornerButtonEnabled(False)
+        self.setAlternatingRowColors(True)
         self.doubleClicked.connect(self.on_dbl_click)
         self.cellClicked.connect(self.on_click)
         self.cellChanged.connect(self.on_change)
-        self.setStyleSheet('font-family: sans')
+        self.horizontalHeader().setStretchLastSection(True)
+        self.horizontalHeader().setDefaultAlignment(Qt.AlignLeft and Qt.AlignVCenter)
+        # self.verticalHeader().setStretchLastSection(True)
+        # self.setStyleSheet('font-family: sans')
 
     def set_data(self, data: Dict[str, Dict]):
         if type(data) != list:
@@ -304,7 +362,7 @@ class Table(QTableWidget):
 
     @pyqtSlot()
     def on_click(self):
-        modifiers = PyQt5.QtGui.QGuiApplication.queryKeyboardModifiers()
+        modifiers = QGuiApplication.queryKeyboardModifiers()
         if modifiers != Qt.AltModifier:
             return
         selected = self.selectedItems()

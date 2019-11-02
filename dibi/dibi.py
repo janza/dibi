@@ -7,7 +7,8 @@ import argparse
 
 import MySQLdb
 import MySQLdb.cursors
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5 import QtGui
 from dibi.ui import UI
 
 
@@ -162,8 +163,238 @@ def dibi():
     )
 
     app = QApplication(sys.argv)
+    for font in [
+            './static/Cabin/Cabin-Bold.ttf',
+            './static/Cabin/Cabin-Medium.ttf',
+            './static/Cabin/Cabin-Regular.ttf',
+    ]:
+        QtGui.QFontDatabase.addApplicationFont(font)
+
+
+    app.setStyleSheet('''
+QMainWindow {
+    padding: 0;
+    margin: 0;
+}
+
+QScrollBar:vertical {
+background: #E3E8EB;
+border: none;
+width: 10px;
+margin: 0;
+}
+
+QScrollBar::handle:vertical {
+background: #C3CED9;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+background: none;
+}
+
+QScrollBar::sub-line:vertical,
+QScrollBar::add-line:vertical {
+height: 0;
+background: none;
+}
+
+
+QWidget {
+    color: #131C26;
+    font-family: Cabin;
+    font-weight: 500;
+    background: #f5f5f5;
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    border-style: solid;
+    border-color: #f00;
+}
+
+#top {
+    background: #C3CED9;
+    border-bottom: 1px solid #8FA1B3;
+}
+
+QTextEdit {
+    background: transparent;
+}
+
+QPushButton, QLineEdit {
+font-size: 14px;
+line-height: 14px;
+    color: #131C26;
+    padding: 7px 15px;
+ background-color: rgba(255,255,255,50%);
+border-style: solid;
+border-color: #62778C;
+border-width: 1px;
+}
+
+
+QPushButton {
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+QPushButton:hover {
+
+color: #fff;
+ background-color: #62778C;
+}
+
+#commit-btn {
+border-right-width: 0px;
+border-left-width: 0px;
+}
+
+#rollback-btn {
+border-left-width: 0px;
+border-top-right-radius: 3px;
+border-bottom-right-radius: 3px;
+}
+
+QLineEdit {
+ border-right-width: 0;
+padding: 6px 7px;
+border-top-left-radius: 3px;
+border-bottom-left-radius: 3px;
+}
+
+QListView {
+    selection-background-color: transparent;
+    show-decoration-selected: 0;
+    selection-color: transparent;
+    outline: 0;
+    color: #E3E8EB;
+    background: #2B506B;
+    padding: 7px 0;
+    border: none;
+    font-weight: bold;
+}
+
+#table_list {
+    show-decoration-selected: 0;
+    background: #E3E8EB;
+    color: #2B506B;
+    border-right: 1px solid #8FA1B3;
+}
+
+QListView::item {
+    padding: 0px 5px;
+    margin-bottom: 1px;
+    margin-right: 10px;
+    border: 0px;
+    width: auto;
+}
+
+QListView::item:selected,
+QListView::item:selected:active
+QListView::item:selected:!active {
+    color: #E3E8EB;
+    background: #2B506B;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+QListView::item:hover {
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background: #2B506B;
+    color: #E3E8EB;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+
+QTableWidget {
+    background: #fff;
+    color: #131C26;
+}
+
+QTableWidget QTableCornerButton::section,
+QTableWidget QHeaderView,
+QTableWidget QHeaderView::section
+{
+    color: #131C26;
+    background: #fff;
+}
+
+QTableWidget QHeaderView {
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+QTableWidget QHeaderView::section {
+    border: none;
+    padding: 0 10px;
+    text-align: center;
+}
+
+QTableWidget QHeaderView::item {
+    color: #131C26;
+    font-weight: bold;
+    padding-left: 3px;
+    text-align: right;
+    border-top: 1px solid #ddd;
+}
+
+QTableWidget::item {
+    border-left-width: 0px;
+    border-right-width: 0px;
+    background: #fff;
+}
+
+QTableWidget::item:alternate {
+    background: #f5f5f5;
+}
+
+QTableWidget::item:hover {
+    background: #E3E8EB;
+}
+
+QTableWidget::item:first {
+    border-top: 1px solid #000;
+}
+
+QTableWidget::item:selected:!active {
+    color: #fff;
+    background-color: #1B4060;
+}
+
+QTableWidget::item:focus {
+    color: #1B4060;
+    background-color: #fff;
+    border: none;
+}
+
+QTableWidget::item:active {
+    color: #1B4060;
+    background-color: #fff;
+    border: none;
+}
+
+QTableWidget::item:selected:active {
+    color: #fff;
+    background-color: #1B4060;
+}
+
+QTableWidget::item:selected {
+    color: #fff;
+    background-color: #1B4060;
+}
+
+''')
     widget = UI(Controller(c))
-    widget.show()
+    # widget.show()
+
+    window = QMainWindow()
+    window.layout().setSpacing(0)
+    window.setCentralWidget(widget)
+    # window.layout().addWidget(widget)
+    window.show()
     return_code = app.exec_()
     c.close()
     sys.exit(return_code)
