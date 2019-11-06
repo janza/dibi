@@ -12,6 +12,9 @@ setup(
     license='MIT',
     packages=['dibi'],
     include_package_data=True,
+    package_data={
+        'static': ['static/Cabin/*']
+    },
     install_requires=[
         'PyQt5',
         'mysqlclient',
