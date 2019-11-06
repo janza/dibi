@@ -68,8 +68,6 @@ class Controller():
                         name = row['Key_name']
                     if row['Key_name'].lower() == name:
                         index.append(row['Column_name'])
-            if column_name in index:
-                raise Exception('Can\'t update index column')
             query = 'update `{}` set `{}` = %s where {}'.format(
                 self.current_table, column_name, ' AND '.join([
                     '{} = %s'.format(i) for i in index
@@ -268,11 +266,16 @@ QListView {
     show-decoration-selected: 0;
     selection-color: transparent;
     outline: 0;
-    color: #E3E8EB;
-    background: #2B506B;
     padding: 7px 0;
     border: none;
-    font-weight: bold;
+    font-weight: normal;
+    color: #E3E8EB;
+    background: #2B506B;
+}
+
+#sidebar {
+    color: #E3E8EB;
+    background: #2B506B;
 }
 
 #table_list {
@@ -285,25 +288,42 @@ QListView {
 QListView::item {
     padding: 0px 5px;
     margin-bottom: 1px;
-    margin-right: 10px;
     border: 0px;
     width: auto;
 }
 
-QListView::item:selected,
-QListView::item:selected:active
-QListView::item:selected:!active {
+#table_list::item {
+    margin-right: 10px;
+}
+
+#db_list::item {
+    margin-right: 0;
+}
+
+#db_list::item:hover:!selected {
+    background: #3D5F78;
+}
+
+#db_list::item:selected,
+#db_list::item:selected:active
+#db_list::item:selected:!active {
+    background: #E3E8EB;
+    color: #2B506B;
+}
+
+#table_list::item:selected,
+#table_list::item:selected:active
+#table_list::item:selected:!active {
     color: #E3E8EB;
     background: #2B506B;
     border-top-right-radius: 3px;
     border-bottom-right-radius: 3px;
 }
 
-QListView::item:hover {
+#table_list::item:hover:!selected {
     border-top-right-radius: 3px;
     border-bottom-right-radius: 3px;
-    background: #2B506B;
-    color: #E3E8EB;
+    background: #BECAD1;
     font-weight: bold;
     text-transform: uppercase;
 }

@@ -9,12 +9,14 @@ from PyQt5.QtWidgets import QTableWidget,\
     QLineEdit,\
     QTextEdit, \
     QListView,\
+    QLabel,\
     QMainWindow,\
     QItemDelegate,\
     QSizePolicy,\
+    QStackedWidget,\
     QPushButton
-from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QSize, QPropertyAnimation
-from PyQt5.QtGui import QGuiApplication, QTextCursor
+from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal
+from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
 
 class ListViewModel(QAbstractListModel):
@@ -43,6 +45,21 @@ class ItemDelegate(QItemDelegate):
     pass
     # def sizeHint(self, yes, no):
     #     return QSize(100, 26)
+
+
+class VertLabel(QWidget):
+    clicked = pyqtSignal()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setPen(Qt.white)
+        painter.translate(10, 10)
+        painter.rotate(90)
+        painter.drawText(0, 0, "D A T A B A S E S")
+        painter.end()
+
+    def mouseReleaseEvent(self, event):
+        self.clicked.emit()
 
 
 class UI(QWidget):
@@ -98,13 +115,20 @@ class UI(QWidget):
         except Exception:
             self.table_list = ListViewModel([], parent=self)
 
-        self.list = QListView(parent=self)
+        self.sidebar = QStackedWidget(parent=self)
+        self.sidebar.setObjectName('sidebar')
+
+        self.list = QListView(parent=self.sidebar)
         self.list.setObjectName('db_list')
         self.list.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.MinimumExpanding)
-        # self.list.setMinimumSize(50)
+        dbs_label = VertLabel()
+
+        self.sidebar.addWidget(self.list)
+        self.sidebar.addWidget(dbs_label)
+        self.sidebar.setMaximumWidth(200)
+
         self.list.setModel(self.db_list)
-        self.list.setMaximumWidth(200)
-        self.list.clicked.connect(self.on_list_click)
+        dbs_label.clicked.connect(self.on_list_click)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
         self.tablelist = QListView(parent=self)
@@ -115,7 +139,7 @@ class UI(QWidget):
         self.tablelist.doubleClicked.connect(self.on_tablename_dbl_click)
         self.tablelist.clicked.connect(self.on_tablename_click)
 
-        self.bottom_layout.addWidget(self.list)
+        self.bottom_layout.addWidget(self.sidebar)
         self.bottom_layout.addWidget(self.tablelist)
         self.bottom_layout.addWidget(self.table)
 
@@ -219,6 +243,7 @@ class UI(QWidget):
 
     @pyqtSlot()
     def on_list_dbl_click(self):
+        self.close_db_list()
         selection = self.list.selectedIndexes()[0]
         try:
             db = self.db_list.get(selection)
@@ -255,8 +280,9 @@ class UI(QWidget):
     def open_db_list(self):
         if self.db_list_open:
             return
+        self.sidebar.setCurrentIndex(0)
         self.db_list_open = True
-        self.anim = QPropertyAnimation(self.list, b'maximumWidth')
+        self.anim = QPropertyAnimation(self.sidebar, b'maximumWidth')
         self.anim.setDuration(150)
         # self.anim.setStartValue(30)
         self.anim.setEndValue(200)
@@ -265,8 +291,9 @@ class UI(QWidget):
     def close_db_list(self):
         if not self.db_list_open:
             return
+        self.sidebar.setCurrentIndex(1)
         self.db_list_open = False
-        self.anim = QPropertyAnimation(self.list, b'maximumWidth')
+        self.anim = QPropertyAnimation(self.sidebar, b'maximumWidth')
         self.anim.setDuration(150)
         # self.anim.setStartValue(200)
         self.anim.setEndValue(30)
