@@ -278,6 +278,15 @@ QListView {
     background: #2B506B;
 }
 
+#database_label {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#database_label:hover {
+    cursor: pointer;
+}
+
 #table_list {
     show-decoration-selected: 0;
     background: #E3E8EB;

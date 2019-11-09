@@ -122,6 +122,8 @@ class UI(QWidget):
         self.list.setObjectName('db_list')
         self.list.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.MinimumExpanding)
         dbs_label = VertLabel()
+        dbs_label.setObjectName('database_label')
+        dbs_label.setCursor(Qt.PointingHandCursor)
 
         self.sidebar.addWidget(self.list)
         self.sidebar.addWidget(dbs_label)
