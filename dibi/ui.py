@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import List, Tuple
 from os.path import commonprefix
 
 from PyQt5.QtWidgets import QTableWidget,\
@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import QTableWidget,\
     QLineEdit,\
     QTextEdit, \
     QListView,\
-    QLabel,\
     QMainWindow,\
     QItemDelegate,\
     QSizePolicy,\
@@ -63,9 +62,15 @@ class VertLabel(QWidget):
 
 
 class UI(QWidget):
-    def __init__(self, controller):
+    def __init__(self, thread):
         super().__init__()
-        self.controller = controller
+        self.t = thread
+        self.t.db_list_updated.connect(self.on_dbs_list)
+        self.t.query_result.connect(self.on_query_result)
+        self.t.error.connect(self.on_error)
+        self.t.execute.connect(self.on_query)
+        self.t.table_list_updated.connect(self.on_tables_list)
+
         self.setObjectName('mainbox')
         self.db_list_open = True
 
@@ -106,14 +111,10 @@ class UI(QWidget):
         self.bottom_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.bottom.setLayout(self.bottom_layout)
 
-        self.table = Table(self.controller, parent=self)
+        self.table = Table(parent=self)
         self.table.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 
-        self.db_list = ListViewModel(controller.get_db_list(), parent=self)
-        try:
-            self.table_list = ListViewModel(controller.get_table_list(), parent=self)
-        except Exception:
-            self.table_list = ListViewModel([], parent=self)
+        self.table_list = ListViewModel([], parent=self)
 
         self.sidebar = QStackedWidget(parent=self)
         self.sidebar.setObjectName('sidebar')
@@ -129,7 +130,6 @@ class UI(QWidget):
         self.sidebar.addWidget(dbs_label)
         self.sidebar.setMaximumWidth(200)
 
-        self.list.setModel(self.db_list)
         dbs_label.clicked.connect(self.on_list_click)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
@@ -157,6 +157,26 @@ class UI(QWidget):
 
         self.history_cursor = 0
         self.history = []
+
+        self.db_list = ListViewModel([], parent=self)
+        self.t.job.emit('db_list', '', '', {})
+
+    def on_dbs_list(self, dbs: List[str]):
+        self.db_list = ListViewModel(dbs, parent=self)
+        self.list.setModel(self.db_list)
+
+    def on_tables_list(self, tables: List[str]):
+        self.table_list = ListViewModel(tables, parent=self)
+        self.tablelist.setModel(self.table_list)
+
+    def on_error(self, error: str):
+        self.append_to_status(error)
+
+    def on_query(self, query: str, params):
+        self.append_to_status(query + (' ' + str(params) if params else ''))
+
+    def on_query_result(self, results):
+        self.table.set_data(results)
 
     def append_to_status(self, text: str):
         lines = self.log_text.toPlainText().split('\n')
@@ -232,12 +252,12 @@ class UI(QWidget):
     @pyqtSlot()
     def on_commit_click(self):
         self.append_to_status('COMMIT')
-        self.controller.commit()
+        self.t.job.emit('commit', '', '', {})
 
     @pyqtSlot()
     def on_rollback_click(self):
         self.append_to_status('ROLLBACK')
-        self.controller.rollback()
+        self.t.job.emit('rollback', '', '', {})
 
     @pyqtSlot()
     def on_list_click(self):
@@ -247,25 +267,8 @@ class UI(QWidget):
     def on_list_dbl_click(self):
         self.close_db_list()
         selection = self.list.selectedIndexes()[0]
-        try:
-            db = self.db_list.get(selection)
-            query = 'use `{}`'.format(db)
-            self.append_to_status(query)
-            self.controller.text_update(query)
-        except Exception as err:
-            self.append_to_status(str(err))
-        self.get_table_list(db)
-        # self.close_db_list()
-        # return False
-
-    def get_table_list(self, db):
-        try:
-            tables = self.controller.get_table_list(db)
-            self.table_list = ListViewModel(tables, parent=self)
-            self.tablelist.setModel(self.table_list)
-            return tables
-        except Exception as err:
-            self.append_to_status(str(err))
+        db = self.db_list.get(selection)
+        self.t.job.emit('table_list', db, '', {})
 
     @pyqtSlot()
     def on_tablename_click(self):
@@ -274,10 +277,7 @@ class UI(QWidget):
             return
         selection = self.tablelist.selectedIndexes()[0]
         selected_table = self.table_list.get(selection)
-        try:
-            self.set_data(self.controller.columns(selected_table))
-        except Exception as err:
-            self.append_to_status(str(err))
+        self.t.job.emit('table_contents', selected_table, '', {})
 
     def open_db_list(self):
         if self.db_list_open:
@@ -286,7 +286,6 @@ class UI(QWidget):
         self.db_list_open = True
         self.anim = QPropertyAnimation(self.sidebar, b'maximumWidth')
         self.anim.setDuration(150)
-        # self.anim.setStartValue(30)
         self.anim.setEndValue(200)
         self.anim.start()
 
@@ -297,40 +296,31 @@ class UI(QWidget):
         self.db_list_open = False
         self.anim = QPropertyAnimation(self.sidebar, b'maximumWidth')
         self.anim.setDuration(150)
-        # self.anim.setStartValue(200)
         self.anim.setEndValue(30)
         self.anim.start()
 
-    @pyqtSlot()
     def on_tablename_dbl_click(self):
         selection = self.tablelist.selectedIndexes()[0]
-        try:
-            selected_table = self.table_list.get(selection)
-            query = 'select * from `{}`'.format(selected_table)
-            self.append_to_status(query)
-            self.set_data(self.controller.text_update(query))
-        except Exception as err:
-            self.append_to_status(str(err))
+        selected_table = self.table_list.get(selection)
+        self.t.job.emit('table_data', selected_table, '', {})
         self.close_db_list()
 
-    @pyqtSlot()
     def on_enter(self):
         text = self.textbox.text()
         self.history.append(text)
         self.history_cursor = 0
-        self.append_to_status(text)
-        try:
-            self.set_data(self.controller.text_update(text))
-        except Exception as err:
-            self.append_to_status(str(err))
+        self.t.job.emit('query', text, '', {})
         self.textbox.setText('')
 
-    def set_data(self, data):
-        self.table.set_data(data)
+    def on_reference_click(self, column_name, value):
+        self.t.job.emit('get_reference', column_name, value, {})
+
+    def update_record(self, record, column_name, data):
+        self.t.job.emit('update', column_name, str(data), record)
 
 
 class TableItem(QTableWidgetItem):
-    def __init__(self, column_name, record):
+    def __init__(self, column_name, idx, record):
         super().__init__(str(record[column_name]))
         self.column_name = column_name
         self.record = record
@@ -340,71 +330,55 @@ class TableItem(QTableWidgetItem):
 
 
 class Table(QTableWidget):
-    def __init__(self, controller, parent):
+    def __init__(self, parent):
         super().__init__(parent=parent)
-        self.controller = controller
         self.parent = parent
         self.setShowGrid(False)
         self.setCornerButtonEnabled(False)
         self.setAlternatingRowColors(True)
         self.doubleClicked.connect(self.on_dbl_click)
         self.cellClicked.connect(self.on_click)
-        self.cellChanged.connect(self.on_change)
+        self.itemChanged.connect(self.on_change)
         self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignLeft and Qt.AlignVCenter)
-        # self.verticalHeader().setStretchLastSection(True)
-        # self.setStyleSheet('font-family: sans')
 
-    def set_data(self, data: Dict[str, Dict]):
-        if type(data) != list:
-            row_count = data.rowcount
-        else:
-            row_count = len(data)
+    def set_data(self, data: List[Tuple]):
+        row_count = len(data)
 
         if row_count == 0:
             self.setRowCount(0)
             self.setColumnCount(0)
             return
 
-        self.setRowCount(row_count)
+        self.setRowCount(row_count - 1)
 
-        for row, item in enumerate(data):
-            column_names = item.keys()
-            col_count = len(column_names)
-            self.setColumnCount(col_count)
-            self.setHorizontalHeaderLabels(column_names)
-            for col, (column_name, val) in enumerate(item.items()):
-                self.setItem(row, col, TableItem(column_name, item))
+        i = iter(data)
+        header = next(i)
 
+        self.setColumnCount(len(header))
+        self.setHorizontalHeaderLabels(header)
+
+        for row, item in enumerate(i):
+            for col, val in enumerate(item):
+                record = dict(zip(header, item))
+                self.setItem(row, col, TableItem(header[col], col, record))
         self.resizeColumnsToContents()
 
-    @pyqtSlot()
     def on_change(self):
         for item in self.selectedItems():
-            try:
-                if item.column_name in item.record and item.data(0) != item.record[item.column_name]:
-                    query = self.controller.update_record(item.record, item.column_name, item.data(0))
-                    if query:
-                        self.parent.append_to_status(query)
-            except Exception as err:
-                print('Failed to change a column', err)
+            if item.data(0) != item.record[item.column_name]:
+                self.parent.update_record(item.record, item.column_name, item.data(0))
+                return
 
-    @pyqtSlot()
     def on_click(self):
         modifiers = QGuiApplication.queryKeyboardModifiers()
         if modifiers != Qt.AltModifier:
             return
         selected = self.selectedItems()
         for item in selected:
-            try:
-                referenced_data = self.controller.get_reference(item.column_name, item.record[item.column_name])
-                if referenced_data is not None:
-                    self.set_data(referenced_data)
-            except Exception as err:
-                print(err)
-        return True
+            self.parent.on_reference_click(item.column_name, str(item.record[item.column_name]))
+            return
 
-    @pyqtSlot()
     def on_dbl_click(self):
         pass
         # for item in self.selectedItems():

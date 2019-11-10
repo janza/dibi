@@ -9,16 +9,13 @@ import MySQLdb
 import MySQLdb.cursors
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtGui
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from dibi.ui import UI
 
+from collections import deque
 
-class Controller():
-    def __init__(self, c):
-        self.c = c
-        self.table_cache = {}
-        self.current_db = None
-        self.current_table = None
 
+class SQLParser():
     @staticmethod
     def get_table_from_query(query):
         m = re.search(
@@ -38,66 +35,154 @@ class Controller():
             return None
         return m.groups()[0]
 
-    def prepare_query(self, query):
+
+class DbThread(QThread):
+    db_list_updated = pyqtSignal(list)
+    table_list_updated = pyqtSignal(list)
+    error = pyqtSignal(str)
+    query_result = pyqtSignal(list)
+    execute = pyqtSignal(str, tuple)
+
+    job = pyqtSignal(
+        [str, str, str, dict],
+        [str, str, int, dict],
+    )
+
+    def __init__(self, args):
+        super().__init__()
+        self.args = args
+        self.queue = deque([])
+        self.table_cache = {}
+
+    def __del__(self):
+        self.wait()
+
+    @pyqtSlot(str, str, int, dict)
+    @pyqtSlot(str, str, str, dict)
+    def enqueue(self, request_type, param_a, param_b=None, more=None):
+        print(request_type, param_a, param_b, more)
+        try:
+            self.process(request_type, param_a, param_b, more)
+        except Exception as err:
+            self.error.emit(str(err))
+
+    def run(self):
+        self.job.connect(self.enqueue)
+        self.c = MySQLdb.connect(
+            host=self.args.host,
+            user=self.args.user,
+            password=self.args.password,
+            port=self.args.port,
+            cursorclass=MySQLdb.cursors.DictCursor
+        )
+
+    def process(self, request_type, params, extra, more):
+        if request_type == 'query':
+            self.send_results(params)
+
+        elif request_type == 'table_contents':
+            self.send_results('show columns in `{}`'.format(params))
+
+        elif request_type == 'table_list':
+            self._get_table_list(params)
+
+        elif request_type == 'table_data':
+            self.send_results('select * from `{}`'.format(params))
+
+        elif request_type == 'db_list':
+            self.db_list_updated.emit(self.get_db_list())
+
+        elif request_type == 'get_reference':
+            self.get_reference(column=params, value=extra)
+
+        elif request_type == 'commit':
+            self.c.commit()
+
+        elif request_type == 'rollback':
+            self.c.rollback()
+
+        elif request_type == 'update':
+            self.update_record(record=more, column_name=params, value=extra)
+
+        else:
+            print('unknown request_type', request_type)
+
+    def update_record(self, record, column_name, value):
+        if not self.current_table:
+            raise RuntimeError('No table selected to update {}'.format(column_name))
+
+        rows = self.run_query('show index from `{}` where non_unique = false or key_name="primary"'.format(self.current_table))
+
+        index = []
+        for row in rows:
+            if row['Key_name'].lower() == 'primary':
+                index.append(row['Column_name'])
+
+        if not index:
+            name = None
+            for row in rows:
+                if name is None:
+                    name = row['Key_name']
+                if row['Key_name'].lower() == name:
+                    index.append(row['Column_name'])
+
+        if not index:
+            raise RuntimeError('Could not find unique index to update {}'.format(column_name))
+
+        query = 'update `{}` set `{}` = %s where {}'.format(
+            self.current_table, column_name, ' AND '.join([
+                '{} = %s'.format(i) for i in index
+            ]))
+        params = (value,) + tuple([record[i] for i in index])
+        self.run_query(query, params)
+
+    def _get_table_list(self, db):
+        self.run_query('use `{}`'.format(db))
+        print(self.table_cache)
+
+        try:
+            return self.table_cache[db]
+        except Exception:
+            pass
+
+        tables = [list(row.values())[0]
+                  for row in self.run_query('show tables')]
+        self.table_list_updated.emit(tables)
+
+    def _prepare_query(self, query):
         if query[:3].lower() == 'use':
-            self.current_db = self.get_db_from_use(query)
+            self.current_db = SQLParser.get_db_from_use(query)
         elif query[:6].lower() == 'select':
             query += ' LIMIT 100'
-            db, table = self.get_table_from_query(query)
+            db, table = SQLParser.get_table_from_query(query)
             if db:
                 self.current_db = db
             if table:
                 self.current_table = table
         return query
 
-    def update_record(self, record, column_name, value):
-        if not self.current_table:
-            return None
-        with self.c.cursor() as cursor:
-            cursor.execute('show index from `{}` where non_unique = false or key_name="primary"'.format(self.current_table))
-
-            rows = cursor.fetchall()
-            index = []
-            for row in rows:
-                if row['Key_name'].lower() == 'primary':
-                    index.append(row['Column_name'])
-            if not index:
-                name = None
-                for row in rows:
-                    if name is None:
-                        name = row['Key_name']
-                    if row['Key_name'].lower() == name:
-                        index.append(row['Column_name'])
-            query = 'update `{}` set `{}` = %s where {}'.format(
-                self.current_table, column_name, ' AND '.join([
-                    '{} = %s'.format(i) for i in index
-                ]))
-            params = (value,) + tuple([record[i] for i in index])
-            cursor.execute(query, params)
-            return query % params
-
-    def commit(self):
-        self.c.commit()
-
-    def rollback(self):
-        self.c.rollback()
-
-    def columns(self, table):
-        with self.c.cursor() as cursor:
-            if not self.current_db:
-                return None
-            cursor.execute('show columns in `{}`'.format(table))
-            return cursor
-
-    def split_queries(self, queries):
+    def _split_queries(self, queries):
         for query in queries.split(';'):
             if query.strip():
-                yield self.prepare_query(query)
+                yield self._prepare_query(query)
 
-    def text_update(self, text, params=None):
+    def send_results(self, text, params=None):
+        c = iter(self.run_query(text, params))
+        try:
+            first_row = next(c)
+        except StopIteration:
+            self.query_result.emit([])
+            return
+        columns = tuple(first_row.keys())
+        self.query_result.emit(
+            [columns, tuple(first_row.values())] +
+            [tuple(r.values()) for r in c])
+
+    def run_query(self, text, params=None):
         with self.c.cursor() as cursor:
-            for query in self.split_queries(text):
+            for query in self._split_queries(text):
                 if query.strip():
+                    self.execute.emit(query, params or ())
                     cursor.execute(query, params)
             return cursor
 
@@ -107,41 +192,30 @@ class Controller():
             return [db[0] for db in cursor]
 
     def get_reference(self, column, value):
-        with self.c.cursor() as cursor:
-            cursor.execute('''
+        c = self.run_query(
+            '''
 SELECT table_name, column_name, referenced_table_name, referenced_column_name
 FROM information_schema.KEY_COLUMN_USAGE
 WHERE constraint_schema = %s
 AND referenced_column_name is not null
 AND table_name = %s
-AND column_name = %s
-            ''', (self.current_db, self.current_table, column))
-            try:
-                row = cursor.fetchone()
-            except Exception as err:
-                print('Error finding reference', err)
-                return None
-            if row is None:
-                return None
-            query = self.prepare_query('select * from `'+row['referenced_table_name']+'` where `'+row['referenced_column_name']+'` = %s')
-            cursor.execute(query, (value, ))
-            return cursor
-
-    def get_table_list(self, db):
+AND column_name = %s''',
+            (self.current_db, self.current_table, column))
         try:
-            return self.table_cache[db]
-        except Exception:
-            pass
+            row = next(iter(c))
+        except Exception as err:
+            print('Error finding reference', err)
+            return None
 
-        with self.c.cursor(MySQLdb.cursors.Cursor) as cursor:
-            if db is None:
-                cursor.execute('show tables')
-            else:
-                cursor.execute('show tables in `{}`'.format(db))
-            tables = [table[0] for table in cursor]
-            if db is not None:
-                self.table_cache[db] = tables
-            return tables
+        if row is None:
+            print('Not reference found')
+            return None
+
+        self.send_results(
+            'select * from `{}` where `{}` = %s'
+            .format(
+                row['referenced_table_name'], row['referenced_column_name']
+            ), (value, ))
 
 
 def dibi():
@@ -280,11 +354,6 @@ QListView {
 
 #database_label {
     font-weight: bold;
-    cursor: pointer;
-}
-
-#database_label:hover {
-    cursor: pointer;
 }
 
 #table_list {
@@ -416,13 +485,13 @@ QTableWidget::item:selected {
 }
 
 ''')
-    widget = UI(Controller(c))
-    # widget.show()
+    t = DbThread(args)
+    t.start()
+    widget = UI(t)
 
     window = QMainWindow()
     window.layout().setSpacing(0)
     window.setCentralWidget(widget)
-    # window.layout().addWidget(widget)
     window.show()
     return_code = app.exec_()
     c.close()
