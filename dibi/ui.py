@@ -333,8 +333,6 @@ class Table(QTableWidget):
         self.parent = parent
         self.setShowGrid(False)
         self.setCornerButtonEnabled(False)
-        self.setAlternatingRowColors(True)
-        self.doubleClicked.connect(self.on_dbl_click)
         self.cellClicked.connect(self.on_click)
         self.itemChanged.connect(self.on_change)
         self.horizontalHeader().setStretchLastSection(True)
@@ -378,7 +376,5 @@ class Table(QTableWidget):
             self.parent.on_reference_click(item.column_name, str(item.record[item.column_name]))
             return
 
-    def on_dbl_click(self):
-        pass
-        # for item in self.selectedItems():
-        #     print(item.row(), item.column(), item.record)
+#     def on_dbl_click(self):
+#         pass
