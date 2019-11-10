@@ -278,7 +278,7 @@ background: none;
 
 QWidget {
     color: #131C26;
-    font-family: Cabin;
+    font-family: Cabin, Overpass, Sans;
     font-weight: 500;
     background: #f5f5f5;
     font-size: 14px;
