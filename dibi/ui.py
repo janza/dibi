@@ -74,13 +74,10 @@ class UI(QWidget):
         self.setObjectName('mainbox')
         self.db_list_open = True
 
-        # self.setStyleSheet('border-width: 0; padding: 0; margin: 0')
         self.log_text = QTextEdit('Initalized' + ('\n' * 4))
-        # self.log_text.setWordWrap(True)
         self.log_text.setReadOnly(True)
         self.log_text.setMaximumHeight(100)
         self.log_text.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
-        # self.log_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.textbox = QLineEdit(parent=self)
         self.textbox.installEventFilter(self)
         self.textbox.returnPressed.connect(self.on_enter)
@@ -375,6 +372,3 @@ class Table(QTableWidget):
         for item in selected:
             self.parent.on_reference_click(item.column_name, str(item.record[item.column_name]))
             return
-
-#     def on_dbl_click(self):
-#         pass

@@ -60,7 +60,6 @@ class DbThread(QThread):
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
     def enqueue(self, request_type, param_a, param_b=None, more=None):
-        print(request_type, param_a, param_b, more)
         try:
             self.process(request_type, param_a, param_b, more)
         except Exception as err:
@@ -203,12 +202,11 @@ AND column_name = %s''',
             (self.current_db, self.current_table, column))
         try:
             row = next(iter(c))
-        except Exception as err:
-            print('Error finding reference', err)
-            return None
+        except StopIteration:
+            raise RuntimeError('Error finding reference')
 
         if row is None:
-            print('Not reference found')
+            raise RuntimeError('Error finding reference')
             return None
 
         self.send_results(
@@ -427,9 +425,10 @@ QTableWidget QHeaderView {
 
 QTableWidget QHeaderView::section {
     border: none;
-    padding: 0 10px;
     text-align: center;
+    padding: 0 5px;
 }
+
 
 QTableWidget QHeaderView::item {
     color: #131C26;
