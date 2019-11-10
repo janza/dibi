@@ -164,6 +164,7 @@ class UI(QWidget):
 
         self.db_list = ListViewModel([], parent=self)
         self.t.job.emit('db_list', '', '', {})
+        self.autocomplete_state = []
 
     def on_dbs_list(self, dbs: List[str]):
         self.db_list = ListViewModel(dbs, parent=self)
@@ -201,15 +202,25 @@ class UI(QWidget):
 
     def eventFilter(self, source, event: QEvent):
         if event.type() == QEvent.KeyPress:
-            if event.key() == Qt.Key_Tab:
-                self.autocomplete()
+            key = event.key()
+
+            if key == Qt.Key_Tab or key == Qt.Key_Backtab:
+                self.autocomplete(event.key() == Qt.Key_Tab)
                 return True
-            if event.key() == Qt.Key_Up:
+
+            elif key == Qt.Key_Up:
                 self.prev_command()
                 return True
-            if event.key() == Qt.Key_Down:
+
+            elif key == Qt.Key_Down:
                 self.prev_command()
                 return True
+
+            elif key == Qt.Key_Shift:
+                return False
+
+            self.autocomplete_state = []
+
         return QMainWindow.eventFilter(self, source, event)
 
     SQL = [
@@ -226,14 +237,34 @@ class UI(QWidget):
         'VALUES',
     ]
 
-    def autocomplete(self):
+    def autocomplete(self, forward):
+        if self.autocomplete_state:
+            [words, after_cursor, word, matches, matches, idx] = self.autocomplete_state
+
+            len_matches = len(matches)
+            if forward:
+                idx += 1
+            if not forward:
+                idx += len_matches - 1
+
+            idx = idx % len_matches
+
+            self.autocomplete_state = [list(words), after_cursor, word, matches, matches, idx]
+
+            words.append(matches[idx])
+            match = matches[idx]
+            before_cursor = ' '.join(words)
+            self.textbox.setText(before_cursor + after_cursor)
+            self.textbox.setCursorPosition(len(before_cursor))
+            return
+
         pos = self.textbox.cursorPosition()
         text = self.textbox.text()
         before_cursor, after_cursor = text[:pos], text[pos:]
         words = before_cursor.split(' ')
         word = words.pop().lower()
         wl = len(word)
-        candidates = [s + ' ' for s in self.SQL] + [db + '.' for db in self.db_list._data]
+        candidates = [s + ' ' for s in self.SQL] + [db for db in self.db_list._data]
         if '.' in word:
             db_name = word.split('.')[0]
             self.t.job.emit('table_list', db_name, '', {})
@@ -248,7 +279,8 @@ class UI(QWidget):
 
         match = matches[0]
         if len(matches) != 1:
-            match = commonprefix([m.lower() for m in matches])
+            match = matches[0]
+            self.autocomplete_state = [list(words), after_cursor, word, matches, matches, 0]
 
         words.append(match)
         before_cursor = ' '.join(words)
@@ -323,6 +355,7 @@ class UI(QWidget):
 
     def update_record(self, record, column_name, data):
         self.t.job.emit('update', column_name, str(data), record)
+
 
 class TableItem(QTableWidgetItem):
     def __init__(self, column_name, idx, record):
