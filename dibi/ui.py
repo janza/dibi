@@ -42,20 +42,26 @@ class ListViewModel(QAbstractListModel):
 
 class ItemDelegate(QItemDelegate):
     pass
-    # def sizeHint(self, yes, no):
-    #     return QSize(100, 26)
 
 
 class VertLabel(QWidget):
     clicked = pyqtSignal()
+
+    def __init__(self, text):
+        super().__init__()
+        self.text = text
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(Qt.white)
         painter.translate(10, 10)
         painter.rotate(90)
-        painter.drawText(0, 0, "D A T A B A S E S")
+        painter.drawText(0, 0, self.text)
         painter.end()
+
+    def setText(self, text):
+        self.text = text
+        self.repaint()
 
     def mouseReleaseEvent(self, event):
         self.clicked.emit()
@@ -67,6 +73,7 @@ class UI(QWidget):
         self.t = thread
         self.t.db_list_updated.connect(self.on_dbs_list)
         self.t.query_result.connect(self.on_query_result)
+        self.t.use_db.connect(self.on_use_db)
         self.t.error.connect(self.on_error)
         self.t.execute.connect(self.on_query)
         self.t.table_list_updated.connect(self.on_tables_list)
@@ -119,15 +126,15 @@ class UI(QWidget):
         self.list = QListView(parent=self.sidebar)
         self.list.setObjectName('db_list')
         self.list.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.MinimumExpanding)
-        dbs_label = VertLabel()
-        dbs_label.setObjectName('database_label')
-        dbs_label.setCursor(Qt.PointingHandCursor)
+        self.dbs_label = VertLabel("D A T A B A S E S")
+        self.dbs_label.setObjectName('database_label')
+        self.dbs_label.setCursor(Qt.PointingHandCursor)
 
         self.sidebar.addWidget(self.list)
-        self.sidebar.addWidget(dbs_label)
+        self.sidebar.addWidget(self.dbs_label)
         self.sidebar.setMaximumWidth(200)
 
-        dbs_label.clicked.connect(self.on_list_click)
+        self.dbs_label.clicked.connect(self.on_list_click)
         self.list.doubleClicked.connect(self.on_list_dbl_click)
 
         self.tablelist = QListView(parent=self)
@@ -175,6 +182,10 @@ class UI(QWidget):
 
     def on_query_result(self, results):
         self.table.set_data(results)
+
+    def on_use_db(self, db):
+        self.dbs_label.setText(db)
+        self.close_db_list()
 
     def append_to_status(self, text: str):
         lines = self.log_text.toPlainText().split('\n')
@@ -312,7 +323,6 @@ class UI(QWidget):
 
     def update_record(self, record, column_name, data):
         self.t.job.emit('update', column_name, str(data), record)
-
 
 class TableItem(QTableWidgetItem):
     def __init__(self, column_name, idx, record):

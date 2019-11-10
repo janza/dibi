@@ -42,6 +42,7 @@ class DbThread(QThread):
     error = pyqtSignal(str)
     query_result = pyqtSignal(list)
     execute = pyqtSignal(str, tuple)
+    use_db = pyqtSignal(str)
 
     job = pyqtSignal(
         [str, str, str, dict],
@@ -137,6 +138,8 @@ class DbThread(QThread):
 
     def _get_table_list(self, db):
         self.run_query('use `{}`'.format(db))
+        self.current_db = db
+        self.use_db.emit(db)
         try:
             self.table_list_updated.emit(self.table_cache[db])
             return
@@ -151,6 +154,8 @@ class DbThread(QThread):
     def _prepare_query(self, query):
         if query[:3].lower() == 'use':
             self.current_db = SQLParser.get_db_from_use(query)
+            self.use_db.emit(self.current_db)
+
         elif query[:6].lower() == 'select':
             query += ' LIMIT 100'
             db, table = SQLParser.get_table_from_query(query)
@@ -158,6 +163,7 @@ class DbThread(QThread):
                 self.current_db = db
             if table:
                 self.current_table = table
+
         return query
 
     def _split_queries(self, queries):
