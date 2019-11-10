@@ -166,6 +166,7 @@ class UI(QWidget):
         self.list.setModel(self.db_list)
 
     def on_tables_list(self, tables: List[str]):
+        self.close_db_list()
         self.table_list = ListViewModel(tables, parent=self)
         self.tablelist.setModel(self.table_list)
 
@@ -227,11 +228,8 @@ class UI(QWidget):
         candidates = [s + ' ' for s in self.SQL] + [db + '.' for db in self.db_list._data]
         if '.' in word:
             db_name = word.split('.')[0]
-            try:
-                tables = self.get_table_list(db_name) or []
-            except Exception as err:
-                print(err)
-                tables = self.table_list._data
+            self.t.job.emit('table_list', db_name, '', {})
+            tables = self.table_list._data
             candidates += [db_name + '.' + table + ' ' for table in tables]
         else:
             candidates += [table + ' ' for table in self.table_list._data]
@@ -343,6 +341,7 @@ class Table(QTableWidget):
         self.horizontalHeader().setDefaultAlignment(Qt.AlignLeft and Qt.AlignVCenter)
 
     def set_data(self, data: List[Tuple]):
+        self.clear()
         row_count = len(data)
 
         if row_count == 0:

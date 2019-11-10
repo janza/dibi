@@ -138,15 +138,15 @@ class DbThread(QThread):
 
     def _get_table_list(self, db):
         self.run_query('use `{}`'.format(db))
-        print(self.table_cache)
-
         try:
-            return self.table_cache[db]
-        except Exception:
+            self.table_list_updated.emit(self.table_cache[db])
+            return
+        except KeyError:
             pass
 
         tables = [list(row.values())[0]
                   for row in self.run_query('show tables')]
+        self.table_cache[db] = tables
         self.table_list_updated.emit(tables)
 
     def _prepare_query(self, query):
