@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QTableWidget,\
     QVBoxLayout,\
     QWidget,\
     QLineEdit,\
+    QLabel,\
     QTextEdit, \
     QListView,\
     QMainWindow,\
@@ -85,6 +86,8 @@ class UI(QWidget):
         self.log_text.setReadOnly(True)
         self.log_text.setMaximumHeight(100)
         self.log_text.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+
+        self.db_label_input = QLabel('')
         self.textbox = QLineEdit(parent=self)
         self.textbox.installEventFilter(self)
         self.textbox.returnPressed.connect(self.on_enter)
@@ -150,6 +153,7 @@ class UI(QWidget):
         self.bottom_layout.addWidget(self.table)
 
         self.top_layout.addWidget(self.log_text)
+        text_and_button.addWidget(self.db_label_input)
         text_and_button.addWidget(self.textbox)
         text_and_button.addWidget(commit)
         text_and_button.addWidget(rollback)
@@ -186,6 +190,7 @@ class UI(QWidget):
 
     def on_use_db(self, db):
         self.dbs_label.setText(db)
+        self.db_label_input.setText(db)
         self.close_db_list()
 
     def append_to_status(self, text: str):

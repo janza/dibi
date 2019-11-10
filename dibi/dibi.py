@@ -298,7 +298,7 @@ QTextEdit {
     background: transparent;
 }
 
-QPushButton, QLineEdit {
+QPushButton, QLineEdit, QLabel {
 font-size: 14px;
 line-height: 14px;
     color: #131C26;
@@ -308,7 +308,6 @@ border-style: solid;
 border-color: #62778C;
 border-width: 1px;
 }
-
 
 QPushButton {
     font-weight: bold;
@@ -334,7 +333,15 @@ border-bottom-right-radius: 3px;
 
 QLineEdit {
  border-right-width: 0;
+ border-left-width: 0;
 padding: 6px 7px;
+}
+
+QLabel {
+ border-right-width: 0;
+ padding: 6px 5px;
+    color: #E3E8EB;
+    background: #2B506B;
 border-top-left-radius: 3px;
 border-bottom-left-radius: 3px;
 }
@@ -409,7 +416,6 @@ QListView::item {
     font-weight: bold;
     text-transform: uppercase;
 }
-
 
 QTableWidget {
     background: #fff;
