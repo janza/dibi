@@ -54,6 +54,7 @@ class DbThread(QThread):
         self.args = args
         self.queue = deque([])
         self.table_cache = {}
+        self.c = None
 
     def __del__(self):
         self.wait()
@@ -61,6 +62,8 @@ class DbThread(QThread):
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
     def enqueue(self, request_type, param_a, param_b=None, more=None):
+        while self.c is None:
+            self.sleep(1)
         try:
             self.process(request_type, param_a, param_b, more)
         except Exception as err:
