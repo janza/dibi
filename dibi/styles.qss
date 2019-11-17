@@ -3,34 +3,11 @@ QMainWindow {
     margin: 0;
 }
 
-QScrollBar:vertical {
-    background: #E3E8EB;
-    border: none;
-    width: 10px;
-    margin: 0;
-}
-
-QScrollBar::handle:vertical {
-    background: #C3CED9;
-}
-
-QScrollBar::add-page:vertical,
-QScrollBar::sub-page:vertical {
-    background: none;
-}
-
-QScrollBar::sub-line:vertical,
-QScrollBar::add-line:vertical {
-    height: 0;
-    background: none;
-}
-
-
 QWidget {
     color: #131C26;
     font-family: Cabin, Overpass, Sans;
     font-weight: 500;
-    background: #f5f5f5;
+    background: transparent;
     font-size: 14px;
     padding: 0;
     margin: 0;
@@ -39,12 +16,36 @@ QWidget {
     border-color: #f00;
 }
 
+
+QScrollBar {
+    background: transparent;
+    border: none;
+    width: 5px;
+    margin: 0;
+}
+
+QScrollBar::handle {
+    background: #333;
+}
+
+QScrollBar::add-page,
+QScrollBar::sub-page {
+    background: none;
+}
+
+QScrollBar::sub-line,
+QScrollBar::add-line {
+    height: 0;
+    background: none;
+}
+
+
 #top {
     /* background: #fff; */
 
-    background: qlineargradient(x1: 0, y1: 1, x2: 0.5, y2: 0, stop: 0 #ddd, stop: 1 #fff);
+    background: qlineargradient(x1: 200px, y1: 1, x2: 1, y2: 1, stop: 0 #353b48, stop: 1 #7D818A);
 
-    border-bottom: 1px solid #333;
+    /* border-bottom: 1px solid #111; */
 }
 
 #top QVBoxLayout {
@@ -52,20 +53,20 @@ QWidget {
 }
 
 QTextEdit {
-    background: transparent;
+    background: #eee;
+    margin-bottom: 0;
+    padding: 7px;
+    border-left: 1px solid #111;
+    border-right: 1px solid #111;
 }
 
 QPushButton, QLineEdit, QLabel {
     font-size: 14px;
     line-height: 14px;
-    color: #131C26;
+    color: #353b48;
     padding: 7px 15px;
-
-    background: #fff;
-    color: #2B506B;
-    border-style: solid;
-    border-color: #62778C;
-    border-width: 1px;
+    background: #eee;
+    border: 1px solid #353b48;
 }
 
 QPushButton {
@@ -75,8 +76,8 @@ QPushButton {
 
 QPushButton:hover {
 
-    color: #fff;
-    background-color: #62778C;
+    color: #eee;
+    background-color: #353b48;
 }
 
 #commit-btn {
@@ -86,8 +87,8 @@ QPushButton:hover {
 
 #rollback-btn {
     border-left-width: 0px;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 QLineEdit {
@@ -97,9 +98,11 @@ QLineEdit {
 }
 
 QLabel {
+    background: #eee;
+    font-weight: bold;
     padding: 6px 5px;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 QListView {
@@ -107,16 +110,16 @@ QListView {
     show-decoration-selected: 0;
     selection-color: transparent;
     outline: 0;
-    padding: 7px 0;
+    padding: 0 0;
     font-weight: bold;
+    background: #353b48;
     color: #fff;
-    background: #333;
 }
 
 #sidebar {
+    background: #353b48;
     color: #fff;
-    background: #333;
-    border-right: 1px solid #eee;
+    border-right: 1px solid #333;
 }
 
 #database_label {
@@ -125,8 +128,8 @@ QListView {
 
 #table_list {
     show-decoration-selected: 0;
-    background: #E3E8EB;
-    color: #2B506B;
+    background: #eee;
+    color: #333;
     border-right: 1px solid #8FA1B3;
 }
 
@@ -146,31 +149,32 @@ QListView::item {
 }
 
 #db_list::item:hover:!selected {
-    background: #3D5F78;
+    color: #353b48;
+    background: #eee;
 }
 
 #db_list::item:selected,
 #db_list::item:selected:active
 #db_list::item:selected:!active {
-    background: #E3E8EB;
-    color: #2B506B;
+    background: #eee;
+    color: #353b48;
 }
 
 #table_list::item:selected,
 #table_list::item:selected:active
 #table_list::item:selected:!active {
-    color: #E3E8EB;
-    background: #2B506B;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
+    background: #353b48;
+    color: #eee;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
 #table_list::item:hover:!selected {
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    background: #BECAD1;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background: #353b48;
+    color: #eee;
     font-weight: bold;
-    text-transform: uppercase;
 }
 
 QTableWidget {
@@ -188,7 +192,6 @@ QTableWidget QHeaderView::section
 
 QTableWidget QHeaderView {
     font-weight: bold;
-    text-transform: uppercase;
 }
 
 QTableWidget QHeaderView::section {

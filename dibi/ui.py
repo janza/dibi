@@ -99,7 +99,8 @@ class UI(QWidget):
         self.top = QWidget(parent=self)
         self.top.setObjectName('top')
         self.top_layout = QVBoxLayout()
-        self.top_layout.setContentsMargins(11, 0, 11, 20)
+        self.top_layout.setSpacing(0)
+        self.top_layout.setContentsMargins(0, 0, 0, 14)
         self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
@@ -380,8 +381,6 @@ class Table(QTableWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
         self.parent = parent
-        # self.setShowGrid(False)
-        # self.setCornerButtonEnabled(False)
         self.cellClicked.connect(self.on_click)
         self.itemChanged.connect(self.on_change)
         self.horizontalHeader().setStretchLastSection(True)
