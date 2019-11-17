@@ -99,6 +99,7 @@ class UI(QWidget):
         self.top = QWidget(parent=self)
         self.top.setObjectName('top')
         self.top_layout = QVBoxLayout()
+        self.top_layout.setContentsMargins(11, 0, 11, 20)
         self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
@@ -364,20 +365,23 @@ class UI(QWidget):
 
 class TableItem(QTableWidgetItem):
     def __init__(self, column_name, idx, record):
-        super().__init__(str(record[column_name]))
         self.column_name = column_name
         self.record = record
+        text = self.text()
+        super().__init__(text)
 
     def text(self):
-        return self.record[self.column_name]
+        if self.record[self.column_name] is None:
+            return 'NULL'
+        return str(self.record[self.column_name])
 
 
 class Table(QTableWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
         self.parent = parent
-        self.setShowGrid(False)
-        self.setCornerButtonEnabled(False)
+        # self.setShowGrid(False)
+        # self.setCornerButtonEnabled(False)
         self.cellClicked.connect(self.on_click)
         self.itemChanged.connect(self.on_change)
         self.horizontalHeader().setStretchLastSection(True)
