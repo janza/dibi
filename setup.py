@@ -13,7 +13,7 @@ setup(
     packages=['dibi'],
     include_package_data=True,
     package_data={
-        'static': ['static/Cabin/*']
+        'dibi': ['fonts/*', 'styles.qss'],
     },
     install_requires=[
         'PyQt5',

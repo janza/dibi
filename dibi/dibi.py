@@ -242,15 +242,18 @@ def dibi():
         cursorclass=MySQLdb.cursors.DictCursor
     )
 
+    def expand(filename):
+        return path.join(path.dirname(__file__), filename)
+
     app = QApplication(sys.argv)
     for font in [
-            './static/Cabin/Cabin-Bold.ttf',
-            './static/Cabin/Cabin-Medium.ttf',
-            './static/Cabin/Cabin-Regular.ttf',
+            expand('fonts/Cabin-Bold.ttf'),
+            expand('fonts/Cabin-Medium.ttf'),
+            expand('fonts/Cabin-Regular.ttf'),
     ]:
         QtGui.QFontDatabase.addApplicationFont(font)
 
-    app.setStyleSheet(open(path.join(path.dirname(__file__), 'styles.qss')).read())
+    app.setStyleSheet(open(expand('styles.qss')).read())
     t = DbThread(args)
     t.start()
     widget = UI(t)
