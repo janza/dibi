@@ -79,6 +79,7 @@ class DbThread(QThread):
             cursorclass=MySQLdb.cursors.DictCursor
         )
         self.job.connect(self.enqueue)
+        self.job.emit('db_list', '', '', {})
 
     def process(self, request_type, params, extra, more):
         if request_type == 'query':

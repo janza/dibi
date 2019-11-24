@@ -41,9 +41,9 @@ QScrollBar::add-line {
 
 
 #top {
-    /* background: #fff; */
+    background: #353b48;
 
-    background: qlineargradient(x1: 200px, y1: 1, x2: 1, y2: 1, stop: 0 #353b48, stop: 1 #7D818A);
+    /* background: qlineargradient(x1: 200px, y1: 1, x2: 1, y2: 1, stop: 0 #353b48, stop: 1 #7D818A); */
 
     /* border-bottom: 1px solid #111; */
 }
@@ -127,8 +127,10 @@ QListView {
 }
 
 #table_list {
-    show-decoration-selected: 0;
+    show-decoration-selected: 1;
     background: #eee;
+
+    background: qlineargradient(x1: 0.94, y1: 0, x2: 1, y2: 0, stop: 0 #eee, stop: 1 #bbb);
     color: #333;
     border-right: 1px solid #8FA1B3;
 }
@@ -165,21 +167,26 @@ QListView::item {
 #table_list::item:selected:!active {
     background: #353b48;
     color: #eee;
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
 }
 
 #table_list::item:hover:!selected {
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-    background: #353b48;
-    color: #eee;
+    background: #b5bbc8;
+    color: #111;
     font-weight: bold;
 }
+
+#table_list::item::pressed {
+    background: #fff;
+    color: #333;
+    font-weight: bold;
+}
+
 
 QTableWidget {
     background: #fff;
     color: #131C26;
+    selection-background-color: #131C26;
+    selection-color: #fff;
 }
 
 QTableWidget QTableCornerButton::section,
@@ -202,12 +209,27 @@ QTableWidget QHeaderView::section:selected {
     background: #fff;
 }
 
+QTableWidget QHeaderView::section:checked {
+    background: transparent;
+}
+
+QTableWidget QHeaderView::section:hover:!selected {
+    background: #ccc;
+}
 
 QTableWidget QHeaderView::item {
     color: #131C26;
     font-weight: bold;
     text-align: right;
     border-top: 1px solid #ddd;
+}
+
+QTableWidget QHeaderView::item:hover:!selected {
+    background: #fff;
+}
+
+QTableWidget QHeaderView::item:active {
+    background: #fff;
 }
 
 QTableWidget QHeaderView::item:active {
@@ -217,11 +239,13 @@ QTableWidget QHeaderView::item:active {
 QTableWidget::item {
     border-left-width: 0px;
     border-right-width: 0px;
+    color: #111;
     background: #fff;
 }
 
 QTableWidget::item:alternate {
     background: #f5f5f5;
+    color: #111;
 }
 
 QTableWidget::item:hover {

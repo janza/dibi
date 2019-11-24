@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from os.path import commonprefix
 
 from PyQt5.QtWidgets import QTableWidget,\
     QTableWidgetItem,\
@@ -100,7 +99,7 @@ class UI(QWidget):
         self.top.setObjectName('top')
         self.top_layout = QVBoxLayout()
         self.top_layout.setSpacing(0)
-        self.top_layout.setContentsMargins(0, 0, 0, 14)
+        self.top_layout.setContentsMargins(0, 0, 0, 7)
         self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
@@ -169,7 +168,7 @@ class UI(QWidget):
         self.history = []
 
         self.db_list = ListViewModel([], parent=self)
-        self.t.job.emit('db_list', '', '', {})
+        # self.t.job.emit('db_list', '', '', {})
         self.autocomplete_state = []
 
     def on_dbs_list(self, dbs: List[str]):
