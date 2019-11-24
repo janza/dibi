@@ -69,6 +69,7 @@ class DbThread(QtCore.QObject):
             self.error.emit(str(err))
 
     def longRunning(self):
+        self.running_query.emit(True)
         self.c = MySQLdb.connect(
             host=self.args.host,
             user=self.args.user,
@@ -76,6 +77,7 @@ class DbThread(QtCore.QObject):
             port=self.args.port,
             cursorclass=MySQLdb.cursors.DictCursor
         )
+        self.running_query.emit(False)
         self.job.connect(self.enqueue)
         self.job.emit('db_list', '', '', {})
 
