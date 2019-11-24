@@ -17,6 +17,8 @@ from PyQt5.QtWidgets import QTableWidget,\
 from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread
 from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
+from dibi.waitingspinnerwidget import QtWaitingSpinner
+
 
 class ListViewModel(QAbstractListModel):
     def __init__(self, data, parent):
@@ -77,6 +79,7 @@ class UI(QWidget):
         self.t.error.connect(self.on_error)
         self.t.execute.connect(self.on_query)
         self.t.table_list_updated.connect(self.on_tables_list)
+        self.t.running_query.connect(self.on_query_op)
         t = QThread()
         self.t.moveToThread(t)
         t.started.connect(self.t.longRunning)
@@ -108,10 +111,34 @@ class UI(QWidget):
         self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
+
+        # processing = QWidget()
+        # processing.setObjectName('loader')
+
+        self.spinner = QtWaitingSpinner(self, False)
+        self.spinner.setInnerRadius(-1)
+        self.spinner.setObjectName('spinner')
+        # self.spinner.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.spinner.setColor('#353b48')
+        self.spinner.setBgColor('#eeeeee')
+        self.spinner.setNumberOfLines(16)
+        self.spinner.setRevolutionsPerSecond(1.2)
+        self.spinner.setLineWidth(2.5)
+        self.spinner.setLineLength(12)
+        self.spinner.setRoundness(10)
+        self.spinner.setPadding(5)
+
+        # spinner_layout = QVBoxLayout()
+        # spinner_layout.addWidget(spinner)
+        # processing.setLayout(spinner_layout)
+        # processing.setCursor(Qt.PointingHandCursor)
+        # processing.clicked.connect(self.on_commit_click)
+
         commit = QPushButton("Commit")
         commit.setObjectName('commit-btn')
         commit.setCursor(Qt.PointingHandCursor)
         commit.clicked.connect(self.on_commit_click)
+
         rollback = QPushButton("Rollback")
         rollback.setObjectName('rollback-btn')
         rollback.setCursor(Qt.PointingHandCursor)
@@ -161,6 +188,7 @@ class UI(QWidget):
         self.top_layout.addWidget(self.log_text)
         text_and_button.addWidget(self.db_label_input)
         text_and_button.addWidget(self.textbox)
+        text_and_button.addWidget(self.spinner)
         text_and_button.addWidget(commit)
         text_and_button.addWidget(rollback)
         self.top_layout.addLayout(text_and_button)
@@ -175,6 +203,13 @@ class UI(QWidget):
         self.db_list = ListViewModel([], parent=self)
         self.autocomplete_state = []
 
+    def on_query_op(self, isRunning: bool):
+        if not isRunning:
+            self.spinner.stop()
+            return
+
+        self.spinner.start()
+
     def on_dbs_list(self, dbs: List[str]):
         self.db_list = ListViewModel(dbs, parent=self)
         self.list.setModel(self.db_list)
@@ -186,6 +221,7 @@ class UI(QWidget):
 
     def on_error(self, error: str):
         self.append_to_status(error)
+        self.spinner.stop()
 
     def on_query(self, query: str, params):
         self.append_to_status(query + (' ' + str(params) if params else ''))
