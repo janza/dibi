@@ -20,6 +20,30 @@ from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 from dibi.waitingspinnerwidget import QtWaitingSpinner
 
 
+class CellEditor(QTextEdit):
+    cb = None
+    installed = False
+
+    def setCallback(self, cb):
+        if not self.installed:
+            self.installEventFilter(self)
+            self.installed = True
+        self.cb = cb
+
+    def eventFilter(self, source, event):
+        if self.cb is None or event.type() != QEvent.KeyPress:
+            return QMainWindow.eventFilter(self, source, event)
+
+        key = event.key()
+        modifiers = QGuiApplication.queryKeyboardModifiers()
+
+        if key == Qt.Key_Return and modifiers == Qt.ControlModifier:
+            self.cb(self.toPlainText())
+            self.cb = None
+            return True
+        return QMainWindow.eventFilter(self, source, event)
+
+
 class ListViewModel(QAbstractListModel):
     def __init__(self, data, parent):
         super().__init__(parent=parent)
@@ -183,7 +207,14 @@ class UI(QWidget):
 
         self.bottom_layout.addWidget(self.sidebar)
         self.bottom_layout.addWidget(self.tablelist)
-        self.bottom_layout.addWidget(self.table)
+
+        self.cellEditor = CellEditor()
+
+        self.table_and_editor = QStackedWidget(parent=self)
+        self.table_and_editor.addWidget(self.table)
+        self.table_and_editor.addWidget(self.cellEditor)
+
+        self.bottom_layout.addWidget(self.table_and_editor)
 
         self.top_layout.addWidget(self.log_text)
         text_and_button.addWidget(self.db_label_input)
@@ -383,6 +414,19 @@ class UI(QWidget):
         self.anim.setEndValue(30)
         self.anim.start()
 
+    def show_cell_editor(self, text, cb):
+        self.table_and_editor.setCurrentIndex(1)
+        self.cellEditor.setText(text)
+
+        def onEditDone(text):
+            cb(text)
+            self.close_cell_editor()
+
+        self.cellEditor.setCallback(onEditDone)
+
+    def close_cell_editor(self):
+        self.table_and_editor.setCurrentIndex(0)
+
     def on_tablename_dbl_click(self):
         selection = self.tablelist.selectedIndexes()[0]
         selected_table = self.table_list.get(selection)
@@ -456,9 +500,16 @@ class Table(QTableWidget):
 
     def on_click(self):
         modifiers = QGuiApplication.queryKeyboardModifiers()
-        if modifiers != Qt.AltModifier:
-            return
-        selected = self.selectedItems()
-        for item in selected:
-            self.parent.on_reference_click(item.column_name, str(item.record[item.column_name]))
-            return
+        if modifiers == Qt.AltModifier:
+            selected = self.selectedItems()
+            for item in selected:
+                self.parent.on_reference_click(item.column_name, str(item.record[item.column_name]))
+                return
+        elif modifiers == Qt.ControlModifier:
+            selected = self.selectedItems()
+            for item in selected:
+                def on_update(newValue):
+                    self.parent.update_record(item.record, item.column_name, newValue)
+                self.parent.show_cell_editor(item.record[item.column_name], on_update)
+
+                return
