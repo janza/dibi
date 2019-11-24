@@ -37,6 +37,11 @@ class CellEditor(QTextEdit):
         key = event.key()
         modifiers = QGuiApplication.queryKeyboardModifiers()
 
+        if key == Qt.Key_Escape:
+            self.cb(None)
+            self.cb = None
+            return True
+
         if key == Qt.Key_Return and modifiers == Qt.ControlModifier:
             self.cb(self.toPlainText())
             self.cb = None
@@ -113,7 +118,7 @@ class UI(QWidget):
         self.setObjectName('mainbox')
         self.db_list_open = True
 
-        self.log_text = QTextEdit('Initalized' + ('\n' * 4))
+        self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setMaximumHeight(100)
         self.log_text.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
@@ -251,11 +256,16 @@ class UI(QWidget):
         self.tablelist.setModel(self.table_list)
 
     def on_error(self, error: str):
-        self.append_to_status(error)
+        self.append_to_status('<span style="color: red">'+error+'</span>')
         self.spinner.stop()
 
     def on_query(self, query: str, params):
-        self.append_to_status(query + (' ' + str(params) if params else ''))
+        p = ''
+        if params:
+            p = ' <table style="border-color: red; border-style: solid" border="1px solid red"><tr><td>'
+            p += '</td><td>'.join([str(param) for param in params])
+            p += '</td></tr></table>'
+        self.append_to_status(query + p)
 
     def on_query_result(self, results):
         self.table.set_data(results)
@@ -266,9 +276,8 @@ class UI(QWidget):
         self.close_db_list()
 
     def append_to_status(self, text: str):
-        lines = self.log_text.toPlainText().split('\n')
-        lines.append(text)
-        self.log_text.setPlainText('\n'.join(lines))
+        # lines = self.log_text.toHtml()
+        self.log_text.insertHtml(text + '<br>')
         self.log_text.moveCursor(QTextCursor.End)
 
     def prev_command(self):
@@ -366,12 +375,12 @@ class UI(QWidget):
 
     @pyqtSlot()
     def on_commit_click(self):
-        self.append_to_status('COMMIT')
+        self.append_to_status('<strong style="color: green">COMMIT</strong>')
         self.t.job.emit('commit', '', '', {})
 
     @pyqtSlot()
     def on_rollback_click(self):
-        self.append_to_status('ROLLBACK')
+        self.append_to_status('<strong style="color: red">ROLLBACK</strong>')
         self.t.job.emit('rollback', '', '', {})
 
     @pyqtSlot()
@@ -416,10 +425,11 @@ class UI(QWidget):
 
     def show_cell_editor(self, text, cb):
         self.table_and_editor.setCurrentIndex(1)
-        self.cellEditor.setText(text)
+        self.cellEditor.setText(str(text))
 
         def onEditDone(text):
-            cb(text)
+            if text is not None:
+                cb(text)
             self.close_cell_editor()
 
         self.cellEditor.setCallback(onEditDone)
@@ -444,7 +454,7 @@ class UI(QWidget):
         self.t.job.emit('get_reference', column_name, value, {})
 
     def update_record(self, record, column_name, data):
-        self.t.job.emit('update', column_name, str(data), record)
+        self.t.job.emit('update', column_name, str(data), dict(record))
 
 
 class TableItem(QTableWidgetItem):
@@ -453,6 +463,9 @@ class TableItem(QTableWidgetItem):
         self.record = record
         text = self.text()
         super().__init__(text)
+
+        self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+        # self.setFlags(Qt.ItemIsSelectable)
 
     def text(self):
         if self.record[self.column_name] is None:
@@ -465,6 +478,7 @@ class Table(QTableWidget):
         super().__init__(parent=parent)
         self.parent = parent
         self.cellClicked.connect(self.on_click)
+        self.cellDoubleClicked.connect(self.on_dbl_click)
         self.itemChanged.connect(self.on_change)
         self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignLeft and Qt.AlignVCenter)
@@ -505,11 +519,14 @@ class Table(QTableWidget):
             for item in selected:
                 self.parent.on_reference_click(item.column_name, str(item.record[item.column_name]))
                 return
-        elif modifiers == Qt.ControlModifier:
-            selected = self.selectedItems()
-            for item in selected:
-                def on_update(newValue):
-                    self.parent.update_record(item.record, item.column_name, newValue)
-                self.parent.show_cell_editor(item.record[item.column_name], on_update)
 
-                return
+    def on_dbl_click(self):
+        selected = self.selectedItems()
+        for item in selected:
+            def on_update(newValue):
+                self.parent.update_record(item.record, item.column_name, newValue)
+                item.record[item.column_name] = newValue
+                item.setText(item.text())
+            self.parent.show_cell_editor(item.record[item.column_name], on_update)
+
+            return
