@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QTableWidget,\
     QSizePolicy,\
     QStackedWidget,\
     QPushButton
-from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal
+from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread
 from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
 
@@ -77,6 +77,11 @@ class UI(QWidget):
         self.t.error.connect(self.on_error)
         self.t.execute.connect(self.on_query)
         self.t.table_list_updated.connect(self.on_tables_list)
+        t = QThread()
+        self.t.moveToThread(t)
+        t.started.connect(self.t.longRunning)
+        t.start()
+        self._t = t
 
         self.setObjectName('mainbox')
         self.db_list_open = True
@@ -168,7 +173,6 @@ class UI(QWidget):
         self.history = []
 
         self.db_list = ListViewModel([], parent=self)
-        # self.t.job.emit('db_list', '', '', {})
         self.autocomplete_state = []
 
     def on_dbs_list(self, dbs: List[str]):

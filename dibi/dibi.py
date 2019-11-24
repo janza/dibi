@@ -9,7 +9,7 @@ from os import path
 import MySQLdb
 import MySQLdb.cursors
 from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from dibi.ui import UI
 
@@ -37,13 +37,14 @@ class SQLParser():
         return m.groups()[0]
 
 
-class DbThread(QThread):
+class DbThread(QtCore.QObject):
     db_list_updated = pyqtSignal(list)
     table_list_updated = pyqtSignal(list)
     error = pyqtSignal(str)
     query_result = pyqtSignal(list)
     execute = pyqtSignal(str, tuple)
     use_db = pyqtSignal(str)
+    running_query = pyqtSignal(bool)
 
     job = pyqtSignal(
         [str, str, str, dict],
@@ -57,9 +58,6 @@ class DbThread(QThread):
         self.table_cache = {}
         self.c = None
 
-    def __del__(self):
-        self.wait()
-
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
     def enqueue(self, request_type, param_a, param_b=None, more=None):
@@ -70,7 +68,7 @@ class DbThread(QThread):
         except Exception as err:
             self.error.emit(str(err))
 
-    def run(self):
+    def longRunning(self):
         self.c = MySQLdb.connect(
             host=self.args.host,
             user=self.args.user,
@@ -188,18 +186,8 @@ class DbThread(QThread):
             [columns, tuple(first_row.values())] +
             [tuple(r.values()) for r in c])
 
-    def run_query(self, text, params=None):
-        with self.c.cursor() as cursor:
-            for query in self._split_queries(text):
-                if query.strip():
-                    self.execute.emit(query, params or ())
-                    cursor.execute(query, params)
-            return cursor
-
     def get_db_list(self):
-        with self.c.cursor(MySQLdb.cursors.Cursor) as cursor:
-            cursor.execute('show databases')
-            return [db[0] for db in cursor]
+        return [db['Database'] for db in self.run_query('show databases')]
 
     def get_reference(self, column, value):
         c = self.run_query(
@@ -226,6 +214,19 @@ AND column_name = %s''',
                 row['referenced_table_name'], row['referenced_column_name']
             ), (value, ))
 
+    def run_query(self, text, params=None):
+        with self.c.cursor() as cursor:
+            for query in self._split_queries(text):
+                if not query.strip():
+                    continue
+
+                self.running_query.emit(True)
+                self.execute.emit(query, params or ())
+                cursor.execute(query, params)
+                self.running_query.emit(False)
+
+            return cursor
+
 
 def dibi():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -235,13 +236,6 @@ def dibi():
     p.add_argument('--password', '-p', required=True)
     p.add_argument('--port', '-P', type=int, default=3306)
     args = p.parse_args()
-    c = MySQLdb.connect(
-        host=args.host,
-        user=args.user,
-        password=args.password,
-        port=args.port,
-        cursorclass=MySQLdb.cursors.DictCursor
-    )
 
     def expand(filename):
         return path.join(path.dirname(__file__), filename)
@@ -256,7 +250,6 @@ def dibi():
 
     app.setStyleSheet(open(expand('styles.qss')).read())
     t = DbThread(args)
-    t.start()
     widget = UI(t)
 
     window = QMainWindow()
@@ -264,7 +257,6 @@ def dibi():
     window.setCentralWidget(widget)
     window.show()
     return_code = app.exec_()
-    c.close()
     sys.exit(return_code)
 
 
