@@ -10,7 +10,7 @@ Lightweight MySQL GUI client
 - [x] List columns of a table
 - [ ] Documentation
 - [x] Better gfx
-- [ ] Better updating editing experience
+- [ ] Nicer editing experience
 - [ ] Export results
 - [ ] Tested MacOS and Windows support
 - [ ] Simple scripting options
