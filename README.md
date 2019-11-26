@@ -1,6 +1,6 @@
 # dibi
 
-Lightweight MySQL GUI client with performance in mind
+Lightweight MySQL GUI client
 
 ![Screenshot](https://raw.githubusercontent.com/janza/dibi/master/static/screenshot.png)
 
