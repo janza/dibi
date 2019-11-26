@@ -11,8 +11,16 @@ import MySQLdb.cursors
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
-import myloginpath
+
 from dibi.ui import UI
+
+myloginpath_supported = False
+try:
+    import myloginpath
+    myloginpath_supported = True
+except:
+    pass
+
 
 from collections import deque
 
@@ -231,19 +239,29 @@ AND column_name = %s''',
             return cursor
 
 
-def dibi():
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+def load_from_login_path():
     p = argparse.ArgumentParser()
     p.add_argument('--login-path')
     args = p.parse_args()
-    conf = {}
     connection_required = not args.login_path
-    if args.login_path:
-        try:
-            conf = myloginpath.parse(args.login_path)
-        except configparser.NoSectionError as err:
-            print('Invalid --login-path')
-            sys.exit(1)
+    if not args.login_path:
+        return connection_required, {}
+
+    try:
+        return myloginpath.parse(args.login_path)
+    except configparser.NoSectionError:
+        print('Invalid --login-path')
+        return {}
+
+
+def dibi():
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    conf = {}
+    connection_required = True
+    if myloginpath_supported:
+        connection_required, conf = load_from_login_path()
+
+    p = argparse.ArgumentParser()
     p.add_argument('--host', required=connection_required)
     p.add_argument('--user', '-u', required=connection_required)
     p.add_argument('--password', '-p', required=connection_required)
