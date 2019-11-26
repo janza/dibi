@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import configparser
 import sys
 import signal
 import re
@@ -11,6 +11,7 @@ import MySQLdb.cursors
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
+import myloginpath
 from dibi.ui import UI
 
 from collections import deque
@@ -233,10 +234,21 @@ AND column_name = %s''',
 def dibi():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     p = argparse.ArgumentParser()
-    p.add_argument('--host', required=True)
-    p.add_argument('--user', '-u', required=True)
-    p.add_argument('--password', '-p', required=True)
+    p.add_argument('--login-path')
+    args = p.parse_args()
+    conf = {}
+    connection_required = not args.login_path
+    if args.login_path:
+        try:
+            conf = myloginpath.parse(args.login_path)
+        except configparser.NoSectionError as err:
+            print('Invalid --login-path')
+            sys.exit(1)
+    p.add_argument('--host', required=connection_required)
+    p.add_argument('--user', '-u', required=connection_required)
+    p.add_argument('--password', '-p', required=connection_required)
     p.add_argument('--port', '-P', type=int, default=3306)
+    p.set_defaults(**conf)
     args = p.parse_args()
 
     def expand(filename):

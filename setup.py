@@ -18,6 +18,7 @@ setup(
     install_requires=[
         'PyQt5',
         'mysqlclient',
+	    'myloginpath',
         'dibi'
     ],
     entry_points={
