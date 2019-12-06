@@ -137,7 +137,7 @@ class DbThread(QtCore.QObject):
 
         query = 'update `{}` set `{}` = %s where {}'.format(
             self.current_table, column_name, ' AND '.join([
-                '{} = %s'.format(i) for i in index
+                '`{}` = %s'.format(i) for i in index
             ]))
         params = (value,) + tuple([record[i] for i in index])
         self.run_query(query, params)
