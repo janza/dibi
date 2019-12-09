@@ -78,6 +78,12 @@ QPushButton:hover {
     background-color: #353b48;
 }
 
+
+#run-btn {
+    border-right-width: 0px;
+    border-left-width: 0px;
+}
+
 #commit-btn {
     border-right-width: 0px;
     border-left-width: 0px;

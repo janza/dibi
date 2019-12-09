@@ -126,7 +126,7 @@ class UI(QWidget):
         self.db_label_input = QLabel('')
         self.textbox = QLineEdit(parent=self)
         self.textbox.installEventFilter(self)
-        self.textbox.returnPressed.connect(self.on_enter)
+        self.textbox.returnPressed.connect(self.run_query)
 
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(QMargins(0, 0, 0, 0))
@@ -162,6 +162,11 @@ class UI(QWidget):
         # processing.setLayout(spinner_layout)
         # processing.setCursor(Qt.PointingHandCursor)
         # processing.clicked.connect(self.on_commit_click)
+
+        run = QPushButton("Run")
+        run.setObjectName('run-btn')
+        run.setCursor(Qt.PointingHandCursor)
+        run.clicked.connect(self.run_query)
 
         commit = QPushButton("Commit")
         commit.setObjectName('commit-btn')
@@ -225,6 +230,7 @@ class UI(QWidget):
         text_and_button.addWidget(self.db_label_input)
         text_and_button.addWidget(self.textbox)
         text_and_button.addWidget(self.spinner)
+        text_and_button.addWidget(run)
         text_and_button.addWidget(commit)
         text_and_button.addWidget(rollback)
         self.top_layout.addLayout(text_and_button)
@@ -444,7 +450,7 @@ class UI(QWidget):
         self.t.job.emit('table_data', selected_table, '', {})
         self.close_db_list()
 
-    def on_enter(self):
+    def run_query(self):
         text = self.textbox.text()
         self.history.append(text)
         self.history_cursor = 0
