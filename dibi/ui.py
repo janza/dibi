@@ -20,6 +20,56 @@ from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 from dibi.waitingspinnerwidget import QtWaitingSpinner
 
 
+class CellEditorContainer(QWidget):
+    objectName = 'cellEditorContainer'
+
+    def __init__(self, parent):
+        super().__init__(parent=parent)
+        layout = QVBoxLayout()
+        self.setStyleSheet('background: #ffffff')
+        layout.setContentsMargins(QMargins(0, 0, 0, 0))
+        layout.setSpacing(0)
+        self.cb = None
+        self.cellEditor = CellEditor()
+        layout.addWidget(self.cellEditor)
+
+        bottom_layout = QHBoxLayout()
+
+        save = QPushButton("Save")
+        save.setObjectName('save-change-btn')
+        save.setCursor(Qt.PointingHandCursor)
+        self.save = save
+
+        cancel = QPushButton("Cancel")
+        cancel.setObjectName('cancel-change-btn')
+        cancel.setCursor(Qt.PointingHandCursor)
+        self.cancel = cancel
+
+        bottom_layout.addWidget(self.save)
+        bottom_layout.addWidget(self.cancel)
+
+        layout.addLayout(bottom_layout)
+        self.setLayout(layout)
+
+        self.save.clicked.connect(self.onSaveClick)
+        self.cancel.clicked.connect(self.onCancelClick)
+
+    def setText(self, text):
+        self.cellEditor.setText(text)
+
+    def onSaveClick(self):
+        if self.cb is not None:
+            self.cb(self.cellEditor.toPlainText())
+
+    def onCancelClick(self):
+        if self.cb is not None:
+            self.cb(None)
+
+    def setCallback(self, cb):
+        self.cb = cb
+        self.cellEditor.setCallback(cb)
+
+
 class CellEditor(QTextEdit):
     cb = None
     installed = False
@@ -218,11 +268,11 @@ class UI(QWidget):
         self.bottom_layout.addWidget(self.sidebar)
         self.bottom_layout.addWidget(self.tablelist)
 
-        self.cellEditor = CellEditor()
+        self.cellEditorContainer = CellEditorContainer(parent=self)
 
         self.table_and_editor = QStackedWidget(parent=self)
         self.table_and_editor.addWidget(self.table)
-        self.table_and_editor.addWidget(self.cellEditor)
+        self.table_and_editor.addWidget(self.cellEditorContainer)
 
         self.bottom_layout.addWidget(self.table_and_editor)
 
@@ -432,14 +482,14 @@ class UI(QWidget):
 
     def show_cell_editor(self, text, cb):
         self.table_and_editor.setCurrentIndex(1)
-        self.cellEditor.setText(str(text))
+        self.cellEditorContainer.setText(str(text))
 
         def onEditDone(text):
             if text is not None:
                 cb(text)
             self.close_cell_editor()
 
-        self.cellEditor.setCallback(onEditDone)
+        self.cellEditorContainer.setCallback(onEditDone)
 
     def close_cell_editor(self):
         self.table_and_editor.setCurrentIndex(0)

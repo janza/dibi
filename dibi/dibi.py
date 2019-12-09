@@ -280,7 +280,6 @@ def dibi():
     ]:
         QtGui.QFontDatabase.addApplicationFont(font)
 
-    app.setStyleSheet(open(expand('styles.qss')).read())
     t = DbThread(args)
     widget = UI(t)
 
@@ -288,6 +287,7 @@ def dibi():
     window.layout().setSpacing(0)
     window.setCentralWidget(widget)
     window.show()
+    app.setStyleSheet(open(expand('styles.qss')).read())
     return_code = app.exec_()
     sys.exit(return_code)
 
