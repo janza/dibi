@@ -268,6 +268,7 @@ class UI(QWidget):
         self.append_to_status(query + p)
 
     def on_query_result(self, results):
+        self.close_cell_editor()
         self.table.set_data(results)
 
     def on_use_db(self, db):
