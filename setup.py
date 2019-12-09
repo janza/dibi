@@ -18,9 +18,11 @@ setup(
     install_requires=[
         'PyQt5',
         'mysqlclient',
-        'myloginpath',
         'dibi'
     ],
+    extras_require={
+        'myloginpath': ['myloginpath']
+    },
     entry_points={
         'console_scripts': [
             'dibi = dibi.dibi:dibi',
