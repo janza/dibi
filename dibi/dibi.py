@@ -5,6 +5,7 @@ import signal
 import re
 import argparse
 from os import path
+from configparser import ConfigParser
 
 import MySQLdb
 import MySQLdb.cursors
@@ -258,6 +259,14 @@ def dibi():
     connection_required = True
     if myloginpath_supported:
         connection_required, conf = load_from_login_path()
+
+    if not conf:
+        iniconfig = ConfigParser()
+        iniconfig.read(path.expanduser('~/.dibi.ini'))
+        sections = iniconfig.sections()
+        if sections:
+            conf = dict(iniconfig[sections[0]])
+            connection_required = False
 
     p = argparse.ArgumentParser()
     p.add_argument('--host', required=connection_required)
