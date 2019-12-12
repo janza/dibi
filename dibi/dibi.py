@@ -5,7 +5,6 @@ import signal
 import re
 import argparse
 from os import path
-from configparser import ConfigParser
 
 import MySQLdb
 import MySQLdb.cursors
@@ -14,6 +13,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 
 from dibi.ui import UI
+from dibi.configuration import ConfigurationParser
 
 myloginpath_supported = False
 try:
@@ -261,11 +261,9 @@ def dibi():
         connection_required, conf = load_from_login_path()
 
     if not conf:
-        iniconfig = ConfigParser()
-        iniconfig.read(path.expanduser('~/.dibi.ini'))
-        sections = iniconfig.sections()
-        if sections:
-            conf = dict(iniconfig[sections[0]])
+        config = ConfigurationParser(path.expanduser('~/.dibi.ini'))
+        if config.config:
+            conf = config.config
             connection_required = False
 
     p = argparse.ArgumentParser()
