@@ -242,15 +242,14 @@ def load_from_login_path():
     p = argparse.ArgumentParser()
     p.add_argument('--login-path')
     args = p.parse_args()
-    connection_required = not args.login_path
     if not args.login_path:
-        return connection_required, {}
+        return True, {}
 
     try:
-        return myloginpath.parse(args.login_path)
+        return False, myloginpath.parse(args.login_path)
     except configparser.NoSectionError:
         print('Invalid --login-path')
-        return {}
+        return False, {}
 
 
 def dibi():
