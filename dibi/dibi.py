@@ -217,7 +217,6 @@ AND column_name = %s''',
 
         if row is None:
             raise RuntimeError('Error finding reference')
-            return None
 
         self.send_results(
             'select * from `{}` where `{}` = %s'
