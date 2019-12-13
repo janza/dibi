@@ -1,5 +1,4 @@
-from typing import Dict
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from configparser import ConfigParser
 import subprocess
 
@@ -7,7 +6,7 @@ import subprocess
 @dataclass
 class ConnectionInfo:
     host: str
-    port: str
+    port: int
     user: str
     password: str = field(default='')
     password_cmd: str = field(default='')
@@ -19,15 +18,20 @@ class ConnectionInfo:
 
 
 class ConfigurationParser():
-    config: Dict['str', 'str']
-
     def __init__(self, filepath: str):
         iniconfig = ConfigParser()
         iniconfig.read(filepath)
-        sections = iniconfig.sections()
-        self.config = {}
-        if not sections:
-            return
+        self.config = iniconfig
 
-        first_section = sections[0]
-        self.config = asdict(ConnectionInfo(**dict(iniconfig[first_section])))
+    @property
+    def connections(self):
+        return [
+            ConnectionInfo(
+                self.config[section]['host'],
+                self.config[section].getint('port'),
+                self.config[section]['user'],
+                self.config[section].get('password', ''),
+                self.config[section].get('password_cmd', ''),
+            )
+            for section in self.config.sections()
+        ]

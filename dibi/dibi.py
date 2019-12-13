@@ -5,25 +5,24 @@ import signal
 import re
 import argparse
 from os import path
+from typing import List, Dict
+from collections import deque
 
 import MySQLdb
 import MySQLdb.cursors
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 from dibi.ui import UI
-from dibi.configuration import ConfigurationParser
+from dibi.configuration import ConfigurationParser, ConnectionInfo
 
 myloginpath_supported = False
 try:
     import myloginpath
     myloginpath_supported = True
-except:
+except Exception:
     pass
-
-
-from collections import deque
 
 
 class SQLParser():
@@ -55,44 +54,62 @@ class DbThread(QtCore.QObject):
     execute = pyqtSignal(str, tuple)
     use_db = pyqtSignal(str)
     running_query = pyqtSignal(bool)
+    connections: List[ConnectionInfo] = []
 
     job = pyqtSignal(
         [str, str, str, dict],
         [str, str, int, dict],
     )
 
-    def __init__(self, args):
+    def __init__(self, connections: List[ConnectionInfo]):
         super().__init__()
-        self.args = args
-        self.queue = deque([])
-        self.table_cache = {}
+        if not connections:
+            raise TypeError('Need at least one connection')
+        self.connections = connections
+        self.queue: deque = deque([])
+        self.table_cache: Dict[str, str] = {}
         self.c = None
+        self.is_ready = False
 
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
     def enqueue(self, request_type, param_a, param_b=None, more=None):
         while self.c is None:
             self.sleep(1)
+
         try:
             self.process(request_type, param_a, param_b, more)
         except Exception as err:
             self.error.emit(str(err))
 
-    def longRunning(self):
+    def longRunning(self) -> None:
+        self.connect_to(0)
+
+    def make_ready(self):
+        if self.is_ready:
+            return
+        self.job.connect(self.enqueue)
+        self.is_ready = True
+
+    def connect_to(self, connection_id: int):
+        connection = self.connections[connection_id]
         self.running_query.emit(True)
         self.c = MySQLdb.connect(
-            host=self.args.host,
-            user=self.args.user,
-            password=self.args.password,
-            port=self.args.port,
+            host=connection.host,
+            user=connection.user,
+            password=connection.password,
+            port=connection.port,
             cursorclass=MySQLdb.cursors.DictCursor
         )
         self.running_query.emit(False)
-        self.job.connect(self.enqueue)
+        self.make_ready()
         self.job.emit('db_list', '', '', {})
 
-    def process(self, request_type, params, extra, more):
-        if request_type == 'query':
+    def process(self, request_type: str, params: str, extra, more) -> None:
+        if request_type == 'change_connection':
+            self.connect_to(int(params))
+
+        elif request_type == 'query':
             self.send_results(params)
 
         elif request_type == 'table_contents':
@@ -225,7 +242,7 @@ AND column_name = %s''',
                 row['referenced_table_name'], row['referenced_column_name']
             ), (value, ))
 
-    def run_query(self, text, params=None):
+    def run_query(self, text: str, params=None):
         with self.c.cursor() as cursor:
             for query in self._split_queries(text):
                 if not query.strip():
@@ -260,11 +277,10 @@ def dibi():
     if myloginpath_supported:
         connection_required, conf = load_from_login_path()
 
-    if not conf:
-        config = ConfigurationParser(path.expanduser('~/.dibi.ini'))
-        if config.config:
-            conf = config.config
-            connection_required = False
+    config = ConfigurationParser(path.expanduser('~/.dibi.ini'))
+    connections = config.connections
+
+    connection_required = not bool(connections)
 
     p = argparse.ArgumentParser()
     p.add_argument('--host', required=connection_required)
@@ -274,7 +290,10 @@ def dibi():
     p.set_defaults(**conf)
     args = p.parse_args()
 
-    def expand(filename):
+    if args.host is not None:
+        connections = [ConnectionInfo(**vars(args))] + connections
+
+    def expand(filename: str) -> str:
         return path.join(path.dirname(__file__), filename)
 
     app = QApplication(sys.argv)
@@ -285,7 +304,7 @@ def dibi():
     ]:
         QtGui.QFontDatabase.addApplicationFont(font)
 
-    t = DbThread(args)
+    t = DbThread(connections)
     widget = UI(t)
 
     window = QMainWindow()

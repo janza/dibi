@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Callable, Dict, Union
 
 from PyQt5.QtWidgets import QTableWidget,\
     QTableWidgetItem,\
@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QTableWidget,\
     QSizePolicy,\
     QStackedWidget,\
     QPushButton
-from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread
+from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread, QModelIndex
 from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
 from dibi.waitingspinnerwidget import QtWaitingSpinner
@@ -74,7 +74,7 @@ class CellEditor(QTextEdit):
     cb = None
     installed = False
 
-    def setCallback(self, cb):
+    def setCallback(self, cb: Callable) -> None:
         if not self.installed:
             self.installEventFilter(self)
             self.installed = True
@@ -100,20 +100,20 @@ class CellEditor(QTextEdit):
 
 
 class ListViewModel(QAbstractListModel):
-    def __init__(self, data, parent):
+    def __init__(self, data: List[str], parent: QWidget):
         super().__init__(parent=parent)
         self._data = data
 
     def rowCount(self, ok):
         return len(self._data)
 
-    def flags(self, QModelIndex):
+    def flags(self, _: QModelIndex):
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
-    def get(self, index):
+    def get(self, index: QModelIndex) -> str:
         return self._data[index.row()]
 
-    def data(self, index, role):
+    def data(self, index: QModelIndex, role: int) -> str:
         if role == Qt.DisplayRole:
             return self._data[index.row()]
         elif role == Qt.EditRole:
@@ -175,7 +175,6 @@ class UI(QWidget):
 
         self.db_label_input = QLabel('')
         self.textbox = QLineEdit(parent=self)
-        self.textbox.installEventFilter(self)
         self.textbox.returnPressed.connect(self.run_query)
 
         self.layout = QVBoxLayout()
@@ -295,27 +294,31 @@ class UI(QWidget):
         self.db_list = ListViewModel([], parent=self)
         self.autocomplete_state = []
 
-    def on_query_op(self, isRunning: bool):
+        self.installEventFilter(self)
+        self.textbox.installEventFilter(self)
+
+    def on_query_op(self, isRunning: bool) -> None:
         if not isRunning:
             self.spinner.stop()
             return
 
         self.spinner.start()
 
-    def on_dbs_list(self, dbs: List[str]):
+    def on_dbs_list(self, dbs: List[str]) -> None:
         self.db_list = ListViewModel(dbs, parent=self)
         self.list.setModel(self.db_list)
+        self.open_db_list()
 
-    def on_tables_list(self, tables: List[str]):
+    def on_tables_list(self, tables: List[str]) -> None:
         self.close_db_list()
         self.table_list = ListViewModel(tables, parent=self)
         self.tablelist.setModel(self.table_list)
 
-    def on_error(self, error: str):
+    def on_error(self, error: str) -> None:
         self.append_to_status('<span style="color: red">'+error+'</span>')
         self.spinner.stop()
 
-    def on_query(self, query: str, params):
+    def on_query(self, query: str, params) -> None:
         p = ''
         if params:
             p = ' <table style="border-color: red; border-style: solid" border="1px solid red"><tr><td>'
@@ -323,44 +326,54 @@ class UI(QWidget):
             p += '</td></tr></table>'
         self.append_to_status(query + p)
 
-    def on_query_result(self, results):
+    def on_query_result(self, results) -> None:
         self.close_cell_editor()
         self.table.set_data(results)
 
-    def on_use_db(self, db):
+    def on_use_db(self, db) -> None:
         self.dbs_label.setText(db)
         self.db_label_input.setText(db)
         self.close_db_list()
 
-    def append_to_status(self, text: str):
+    def append_to_status(self, text: str) -> None:
         # lines = self.log_text.toHtml()
         self.log_text.insertHtml(text + '<br>')
         self.log_text.moveCursor(QTextCursor.End)
 
-    def prev_command(self):
-        self.history_cursor -= 1
+    def prev_command(self, inc: int = -1) -> None:
+        self.history_cursor += inc
         hl = len(self.history)
         if hl > 0:
             self.textbox.setText(self.history[self.history_cursor % hl])
+
+    def change_connection(self, connection_id: int) -> None:
+        self.t.job.emit('change_connection', str(connection_id), '', {})
 
     def eventFilter(self, source, event: QEvent):
         if event.type() == QEvent.KeyPress:
             key = event.key()
 
-            if key == Qt.Key_Tab or key == Qt.Key_Backtab:
-                self.autocomplete(event.key() == Qt.Key_Tab)
-                return True
+            if source == self.textbox:
+                if key == Qt.Key_Tab or key == Qt.Key_Backtab:
+                    self.autocomplete(event.key() == Qt.Key_Tab)
+                    return True
 
-            elif key == Qt.Key_Up:
-                self.prev_command()
-                return True
+                elif key == Qt.Key_Up:
+                    self.prev_command()
+                    return True
 
-            elif key == Qt.Key_Down:
-                self.prev_command()
-                return True
+                elif key == Qt.Key_Down:
+                    self.prev_command(+1)
+                    return True
 
-            elif key == Qt.Key_Shift:
-                return False
+                elif key == Qt.Key_Shift:
+                    return False
+
+            elif key >= Qt.Key_0 and key <= Qt.Key_9:
+                if QGuiApplication.queryKeyboardModifiers() == Qt.ControlModifier:
+                    number = key - Qt.Key_0
+                    self.change_connection(number)
+                    return True
 
             self.autocomplete_state = []
 
@@ -441,18 +454,18 @@ class UI(QWidget):
         self.t.job.emit('rollback', '', '', {})
 
     @pyqtSlot()
-    def on_list_click(self):
+    def on_list_click(self) -> None:
         self.open_db_list()
 
     @pyqtSlot()
-    def on_list_dbl_click(self):
+    def on_list_dbl_click(self) -> None:
         self.close_db_list()
         selection = self.list.selectedIndexes()[0]
         db = self.db_list.get(selection)
         self.t.job.emit('table_list', db, '', {})
 
     @pyqtSlot()
-    def on_tablename_click(self):
+    def on_tablename_click(self) -> None:
         modifiers = QGuiApplication.queryKeyboardModifiers()
         if modifiers != Qt.AltModifier:
             return
@@ -460,7 +473,7 @@ class UI(QWidget):
         selected_table = self.table_list.get(selection)
         self.t.job.emit('table_contents', selected_table, '', {})
 
-    def open_db_list(self):
+    def open_db_list(self) -> None:
         if self.db_list_open:
             return
         self.sidebar.setCurrentIndex(0)
@@ -470,7 +483,7 @@ class UI(QWidget):
         self.anim.setEndValue(200)
         self.anim.start()
 
-    def close_db_list(self):
+    def close_db_list(self) -> None:
         if not self.db_list_open:
             return
         self.sidebar.setCurrentIndex(1)
@@ -480,7 +493,7 @@ class UI(QWidget):
         self.anim.setEndValue(30)
         self.anim.start()
 
-    def show_cell_editor(self, text, cb):
+    def show_cell_editor(self, text: str, cb: Callable) -> None:
         self.table_and_editor.setCurrentIndex(1)
         self.cellEditorContainer.setText(str(text))
 
@@ -491,31 +504,31 @@ class UI(QWidget):
 
         self.cellEditorContainer.setCallback(onEditDone)
 
-    def close_cell_editor(self):
+    def close_cell_editor(self) -> None:
         self.table_and_editor.setCurrentIndex(0)
 
-    def on_tablename_dbl_click(self):
+    def on_tablename_dbl_click(self) -> None:
         selection = self.tablelist.selectedIndexes()[0]
         selected_table = self.table_list.get(selection)
         self.t.job.emit('table_data', selected_table, '', {})
         self.close_db_list()
 
-    def run_query(self):
+    def run_query(self) -> None:
         text = self.textbox.text()
         self.history.append(text)
         self.history_cursor = 0
         self.t.job.emit('query', text, '', {})
         self.textbox.setText('')
 
-    def on_reference_click(self, column_name, value):
+    def on_reference_click(self, column_name: str, value: str) -> None:
         self.t.job.emit('get_reference', column_name, value, {})
 
-    def update_record(self, record, column_name, data):
+    def update_record(self, record: Dict['str', 'str'], column_name: str, data: Union[str, int]) -> None:
         self.t.job.emit('update', column_name, str(data), dict(record))
 
 
 class TableItem(QTableWidgetItem):
-    def __init__(self, column_name, idx, record):
+    def __init__(self, column_name: str, idx: int, record: Dict['str', 'str']):
         self.column_name = column_name
         self.record = record
         text = self.text()
@@ -524,14 +537,14 @@ class TableItem(QTableWidgetItem):
         self.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         # self.setFlags(Qt.ItemIsSelectable)
 
-    def text(self):
+    def text(self) -> str:
         if self.record[self.column_name] is None:
             return 'NULL'
         return str(self.record[self.column_name])
 
 
 class Table(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         super().__init__(parent=parent)
         self.parent = parent
         self.cellClicked.connect(self.on_click)
@@ -540,7 +553,7 @@ class Table(QTableWidget):
         self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignLeft and Qt.AlignVCenter)
 
-    def set_data(self, data: List[Tuple]):
+    def set_data(self, data: List[Tuple]) -> None:
         self.clear()
         row_count = len(data)
 

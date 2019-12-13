@@ -26,14 +26,15 @@ SOFTWARE.
 """
 
 import math
+from typing import Any
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt, QTimer, QRect
+from PyQt5.QtGui import QColor, QPainter
+from PyQt5.QtWidgets import QWidget
 
 
 class QtWaitingSpinner(QWidget):
-    def __init__(self, parent, centerOnParent=True, disableParentWhenSpinning=False, modality=Qt.NonModal):
+    def __init__(self, parent: QWidget, centerOnParent: bool = True, disableParentWhenSpinning: bool = False, modality: Any = Qt.NonModal):
         super().__init__(parent)
 
         self._centerOnParent = centerOnParent
@@ -81,8 +82,7 @@ class QtWaitingSpinner(QWidget):
             painter.rotate(rotateAngle)
             painter.translate(self._innerRadius, 0)
             distance = self.lineCountDistanceFromPrimary(i, self._currentCounter, self._numberOfLines)
-            color = self.currentLineColor(distance, self._numberOfLines, self._trailFadePercentage,
-                                          self._minimumTrailOpacity, self._color)
+            color = self.currentLineColor(distance, self._numberOfLines, self._trailFadePercentage, self._minimumTrailOpacity, self._color)
             painter.setBrush(color)
             painter.drawRoundedRect(QRect(0, -self._lineWidth / 2, self._lineLength, self._lineWidth), self._roundness,
                                     self._roundness, Qt.RelativeSize)
@@ -171,7 +171,7 @@ class QtWaitingSpinner(QWidget):
     def setColor(self, color=Qt.black):
         self._color = QColor(color)
 
-    def setRevolutionsPerSecond(self, revolutionsPerSecond):
+    def setRevolutionsPerSecond(self, revolutionsPerSecond: int) -> None:
         self._revolutionsPerSecond = revolutionsPerSecond
         self.updateTimer()
 
@@ -181,31 +181,31 @@ class QtWaitingSpinner(QWidget):
     def setMinimumTrailOpacity(self, minimumTrailOpacity):
         self._minimumTrailOpacity = minimumTrailOpacity
 
-    def rotate(self):
+    def rotate(self) -> None:
         self._currentCounter += 1
         if self._currentCounter >= self._numberOfLines:
             self._currentCounter = 0
         self.update()
 
-    def updateSize(self):
+    def updateSize(self) -> None:
         size = (self._innerRadius + self._lineLength + self._padding) * 2
         self.setFixedSize(size, size)
 
-    def updateTimer(self):
+    def updateTimer(self) -> None:
         self._timer.setInterval(1000 / (self._numberOfLines * self._revolutionsPerSecond))
 
-    def updatePosition(self):
+    def updatePosition(self) -> None:
         if self.parentWidget() and self._centerOnParent:
             self.move(self.parentWidget().width() / 2 - self.width() / 2,
                       self.parentWidget().height() / 2 - self.height() / 2)
 
-    def lineCountDistanceFromPrimary(self, current, primary, totalNrOfLines):
+    def lineCountDistanceFromPrimary(self, current: int, primary: int, totalNrOfLines: int) -> int:
         distance = primary - current
         if distance < 0:
             distance += totalNrOfLines
         return distance
 
-    def currentLineColor(self, countDistance, totalNrOfLines, trailFadePerc, minOpacity, colorinput):
+    def currentLineColor(self, countDistance: int, totalNrOfLines: int, trailFadePerc: float, minOpacity: float, colorinput: int) -> QColor:
         color = QColor(colorinput)
         if countDistance == 0:
             return color
