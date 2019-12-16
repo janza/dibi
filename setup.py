@@ -18,10 +18,11 @@ setup(
     install_requires=[
         'PyQt5',
         'mysqlclient',
-        'dibi'
+        'dibi',
     ],
     extras_require={
-        'myloginpath': ['myloginpath']
+        'myloginpath': ['myloginpath'],
+        'sshtunnel': ['paramiko', 'sshtunnel'],
     },
     entry_points={
         'console_scripts': [

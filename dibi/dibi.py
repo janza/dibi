@@ -5,11 +5,13 @@ import signal
 import re
 import argparse
 from os import path
-from typing import List, Dict
+from typing import List, Dict, Iterator, Optional
 from collections import deque
 
+from sshtunnel import SSHTunnelForwarder
 import MySQLdb
 import MySQLdb.cursors
+import MySQLdb.connections
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
@@ -50,11 +52,16 @@ class DbThread(QtCore.QObject):
     db_list_updated = pyqtSignal(list)
     table_list_updated = pyqtSignal(list)
     error = pyqtSignal(str)
+    info = pyqtSignal(str)
     query_result = pyqtSignal(list)
     execute = pyqtSignal(str, tuple)
     use_db = pyqtSignal(str)
     running_query = pyqtSignal(bool)
+    running_query = pyqtSignal(bool)
+
     connections: List[ConnectionInfo] = []
+    tunnel_server: Optional[SSHTunnelForwarder]
+    c: Optional[MySQLdb.connections.Connection]
 
     job = pyqtSignal(
         [str, str, str, dict],
@@ -67,9 +74,10 @@ class DbThread(QtCore.QObject):
             raise TypeError('Need at least one connection')
         self.connections = connections
         self.queue: deque = deque([])
-        self.table_cache: Dict[str, str] = {}
+        self.table_cache: Dict[str, List[str]] = {}
         self.c = None
         self.is_ready = False
+        self.tunnel_server = None
 
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
@@ -94,13 +102,26 @@ class DbThread(QtCore.QObject):
     def connect_to(self, connection_id: int):
         connection = self.connections[connection_id]
         self.running_query.emit(True)
+        if self.tunnel_server is not None:
+            self.tunnel_server.stop()
+        self.info.emit(str(f'Connecting to {connection}'))
+        tunnel = None
+        if connection.ssh_host and connection.ssh_user:
+            tunnel = SSHTunnelForwarder(
+                (connection.ssh_host, connection.ssh_port),
+                ssh_username=connection.ssh_user,
+                remote_bind_address=(connection.host, connection.port))
+            tunnel.start()
+
         self.c = MySQLdb.connect(
-            host=connection.host,
+            host=connection.host if tunnel is None else '127.0.0.1',
             user=connection.user,
             password=connection.password,
-            port=connection.port,
+            port=connection.port if tunnel is None else tunnel.local_bind_port,
             cursorclass=MySQLdb.cursors.DictCursor
         )
+        self.tunnel_server = tunnel
+        self.info.emit(str(f'Connected to {connection}'))
         self.running_query.emit(False)
         self.make_ready()
         self.job.emit('db_list', '', '', {})
@@ -198,10 +219,15 @@ class DbThread(QtCore.QObject):
 
         return query
 
-    def _split_queries(self, queries):
+    def _split_queries(self, queries: str) -> Iterator[str]:
         for query in queries.split(';'):
-            if query.strip():
-                yield self._prepare_query(query)
+            if not query.strip():
+                continue
+            query = self._prepare_query(query)
+            if not query:
+                continue
+
+            yield query
 
     def send_results(self, text, params=None):
         c = iter(self.run_query(text, params))
@@ -245,9 +271,6 @@ AND column_name = %s''',
     def run_query(self, text: str, params=None):
         with self.c.cursor() as cursor:
             for query in self._split_queries(text):
-                if not query.strip():
-                    continue
-
                 self.running_query.emit(True)
                 self.execute.emit(query, params or ())
                 cursor.execute(query, params)

@@ -156,6 +156,7 @@ class UI(QWidget):
         self.t.query_result.connect(self.on_query_result)
         self.t.use_db.connect(self.on_use_db)
         self.t.error.connect(self.on_error)
+        self.t.info.connect(self.on_info)
         self.t.execute.connect(self.on_query)
         self.t.table_list_updated.connect(self.on_tables_list)
         self.t.running_query.connect(self.on_query_op)
@@ -317,6 +318,9 @@ class UI(QWidget):
     def on_error(self, error: str) -> None:
         self.append_to_status('<span style="color: red">'+error+'</span>')
         self.spinner.stop()
+
+    def on_info(self, info: str) -> None:
+        self.append_to_status('<span style="color: black">'+info+'</span>')
 
     def on_query(self, query: str, params) -> None:
         p = ''

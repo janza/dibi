@@ -171,7 +171,7 @@ class QtWaitingSpinner(QWidget):
     def setColor(self, color=Qt.black):
         self._color = QColor(color)
 
-    def setRevolutionsPerSecond(self, revolutionsPerSecond: int) -> None:
+    def setRevolutionsPerSecond(self, revolutionsPerSecond: float) -> None:
         self._revolutionsPerSecond = revolutionsPerSecond
         self.updateTimer()
 
