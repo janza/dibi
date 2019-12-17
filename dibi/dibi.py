@@ -102,8 +102,7 @@ class DbThread(QtCore.QObject):
     def connect_to(self, connection_id: int):
         connection = self.connections[connection_id]
         self.running_query.emit(True)
-        if self.tunnel_server is not None:
-            self.tunnel_server.stop()
+        self.disconnect()
         self.info.emit(str(f'Connecting to {connection}'))
         tunnel = None
         if connection.ssh_host and connection.ssh_user:
@@ -126,7 +125,17 @@ class DbThread(QtCore.QObject):
         self.make_ready()
         self.job.emit('db_list', '', '', {})
 
+    def disconnect(self):
+        if self.tunnel_server is not None:
+            if self.c is not None:
+                self.c.close()
+            self.tunnel_server.stop()
+
     def process(self, request_type: str, params: str, extra, more) -> None:
+        if request_type == 'disconnect':
+            self.disconnect()
+            self.exit()
+
         if request_type == 'change_connection':
             self.connect_to(int(params))
 
@@ -336,6 +345,7 @@ def dibi():
     window.show()
     app.setStyleSheet(open(expand('styles.qss')).read())
     return_code = app.exec_()
+    t.job.emit('disconnect', '', '', {})
     sys.exit(return_code)
 
 
