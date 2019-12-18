@@ -4,8 +4,9 @@ import sys
 import signal
 import re
 import argparse
+import subprocess
 from os import path
-from typing import List, Dict, Iterator, Optional
+from typing import List, Dict, Iterator, Optional, Tuple, Union
 from collections import deque
 
 from sshtunnel import SSHTunnelForwarder
@@ -29,7 +30,7 @@ except Exception:
 
 class SQLParser():
     @staticmethod
-    def get_table_from_query(query):
+    def get_table_from_query(query: str) -> Union[Tuple[str, str], Tuple[None, None]]:
         m = re.search(
             r'from\s+`?([a-z0-9_]+)`?\.?`?([a-z0-9_]+)?`?', query, re.IGNORECASE)
 
@@ -41,11 +42,15 @@ class SQLParser():
         return None, None
 
     @staticmethod
-    def get_db_from_use(query):
+    def get_db_from_use(query: str) -> Optional[str]:
         m = re.search(r'use\s+`?([a-z0-9_]+)', query, re.IGNORECASE)
         if not m:
             return None
         return m.groups()[0]
+
+    @staticmethod
+    def get_shell_cmd_for_pipe(query: str) -> str:
+        return '-- !'.join(query.split('-- !')[1:])
 
 
 class DbThread(QtCore.QObject):
@@ -158,10 +163,16 @@ class DbThread(QtCore.QObject):
             self.get_reference(column=params, value=extra)
 
         elif request_type == 'commit':
-            self.c.commit()
+            if self.c is not None:
+                self.c.commit()
+            else:
+                self.error.emit('No connection')
 
         elif request_type == 'rollback':
-            self.c.rollback()
+            if self.c is not None:
+                self.c.rollback()
+            else:
+                self.error.emit('No connection')
 
         elif request_type == 'update':
             self.update_record(record=more, column_name=params, value=extra)
@@ -229,6 +240,7 @@ class DbThread(QtCore.QObject):
         return query
 
     def _split_queries(self, queries: str) -> Iterator[str]:
+        queries = queries.split('-- ')[0]
         for query in queries.split(';'):
             if not query.strip():
                 continue
@@ -246,9 +258,21 @@ class DbThread(QtCore.QObject):
             self.query_result.emit([])
             return
         columns = tuple(first_row.keys())
-        self.query_result.emit(
-            [columns, tuple(first_row.values())] +
-            [tuple(r.values()) for r in c])
+        query_result = ([tuple(first_row.values())] +
+                        [tuple(r.values()) for r in c])
+
+        cmd_to_pipe = SQLParser.get_shell_cmd_for_pipe(text)
+        if cmd_to_pipe:
+            self.info.emit(
+                subprocess.check_output(
+                    cmd_to_pipe,
+                    shell=True,
+                    text=True,
+                    input='\n'.join([','.join([str(c) for c in r]) for r in query_result])
+                )
+            )
+
+        self.query_result.emit([columns] + query_result)
 
     def get_db_list(self):
         return [db['Database'] for db in self.run_query('show databases')]
@@ -278,6 +302,11 @@ AND column_name = %s''',
             ), (value, ))
 
     def run_query(self, text: str, params=None):
+
+        if self.c is None:
+            self.error.emit('No connection')
+            return
+
         with self.c.cursor() as cursor:
             for query in self._split_queries(text):
                 self.running_query.emit(True)
