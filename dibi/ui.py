@@ -186,7 +186,6 @@ class UI(QWidget):
         self.top.setObjectName('top')
         self.top_layout = QVBoxLayout()
         self.top_layout.setSpacing(0)
-        self.top_layout.setContentsMargins(0, 0, 0, 7)
         self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
