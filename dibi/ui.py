@@ -284,8 +284,8 @@ class UI(QWidget):
         text_and_button.addWidget(rollback)
         self.top_layout.addLayout(text_and_button)
 
-        self.layout.addWidget(self.top)
         self.layout.addWidget(self.bottom)
+        self.layout.addWidget(self.top)
         self.setLayout(self.layout)
 
         self.history_cursor = 0
@@ -555,6 +555,7 @@ class Table(QTableWidget):
         self.itemChanged.connect(self.on_change)
         self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignLeft and Qt.AlignVCenter)
+        self.setShowGrid(False)
 
     def set_data(self, data: List[Tuple]) -> None:
         self.clear()

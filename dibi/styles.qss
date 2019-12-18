@@ -39,9 +39,8 @@ QScrollBar::add-line {
 }
 
 #top {
-    background: #faeee7;
-    border-bottom: 2px solid #272343;
-    color: #ffd803;
+    background: #E3E8EB;
+    border-top: 2px solid #272343;
 }
 
 #top QVBoxLayout {
@@ -50,6 +49,7 @@ QScrollBar::add-line {
 
 QTextEdit {
     /* background: #faeee7; */
+    background: #E3E8EB;
     color: #272343;
     margin-bottom: 0;
     padding: 7px;
@@ -131,7 +131,7 @@ QListView {
 }
 
 #table_list {
-    background: #eed;
+    background: #faeee7;
     color: #272343;
     border-right: 2px solid #272343;
     border-left: 2px solid #272343;
@@ -176,10 +176,12 @@ QListView::item {
 }
 
 QTableWidget {
-    background: #fff;
-    color: #131C26;
+    background: #f5f5f5;
+    color: #272343;
+    gridline-color: #272343;
     selection-background-color: #131C26;
     selection-color: #fff;
+    /* border: 2px solid #272343; */
 }
 
 QTableWidget QTableCornerButton::section,
@@ -187,15 +189,22 @@ QTableWidget QHeaderView,
 QTableWidget QHeaderView::section
 {
     color: #131C26;
-    background: #fff;
+    background: #E3E8EB;
+}
+
+QHeaderView::section {
+    border-style: none;
+}
+
+QTableWidget QTableCornerButton::section {
+    /* background: #272343; */
+    border-style: none;
+    border-bottom: 1px solid #272343;
+    border-right: 1px solid #272343;
 }
 
 QTableWidget QHeaderView {
     font-weight: bold;
-}
-
-QTableWidget QHeaderView::section {
-    background: #f5f5f5;
 }
 
 QTableWidget QHeaderView::section:selected {
@@ -210,11 +219,23 @@ QTableWidget QHeaderView::section:hover:!selected {
     background: #ccc;
 }
 
+QTableWidget QHeaderView::section::item {
+    padding: 0 7px;
+}
+
+QHeaderView::section:vertical::item {
+    border-bottom: 1px solid #272343;
+}
+
+QHeaderView::section:horizontal::item {
+    border-right: 1px solid #272343;
+}
+
 QTableWidget QHeaderView::item {
     color: #131C26;
     font-weight: bold;
     text-align: right;
-    border-top: 1px solid #ddd;
+    padding: 7px;
 }
 
 QTableWidget QHeaderView::item:hover:!selected {
@@ -230,23 +251,14 @@ QTableWidget QHeaderView::item:active {
 }
 
 QTableWidget::item {
-    border-left-width: 0px;
-    border-right-width: 0px;
-    color: #111;
-    background: #fff;
-}
-
-QTableWidget::item:alternate {
-    background: #f5f5f5;
-    color: #111;
+    border-right: 1px solid #272343;
+    border-bottom: 1px solid #272343;
+    color: #272343;
+    background: #fffffe;
 }
 
 QTableWidget::item:hover {
     background: #E3E8EB;
-}
-
-QTableWidget::item:first {
-    border-top: 1px solid #000;
 }
 
 QTableWidget::item:selected:!active {

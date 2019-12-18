@@ -14,5 +14,5 @@ Lightweight MySQL GUI client
 - [x] Better gfx
 - [ ] Nicer editing experience
 - [ ] Export results
-- [ ] Tested MacOS and Windows support
+- [ ] MacOS and windows distribution
 - [ ] Simple scripting options
