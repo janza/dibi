@@ -5,6 +5,7 @@ import subprocess
 
 @dataclass
 class ConnectionInfo:
+    label: str
     host: str
     port: int
     user: str
@@ -33,6 +34,7 @@ class ConfigurationParser():
     def connections(self):
         return [
             ConnectionInfo(
+                section,
                 self.config[section]['host'],
                 self.config[section].getint('port'),
                 self.config[section]['user'],

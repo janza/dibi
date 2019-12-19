@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QTableWidget,\
 from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread, QModelIndex
 from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
+from dibi.configuration import ConnectionInfo
 from dibi.waitingspinnerwidget import QtWaitingSpinner
 
 
@@ -148,9 +149,22 @@ class VertLabel(QWidget):
         self.clicked.emit()
 
 
+class ConnectionButton(QPushButton):
+    def __init__(self, label: str, index: int, on_click_cb: Callable):
+        super().__init__(label)
+        # self.index = index
+        # self.on_click_cb = on_click_cb
+        self.clicked.connect(lambda x: on_click_cb(index))
+        self.setObjectName('connection-btn')
+        self.setCursor(Qt.PointingHandCursor)
+        if index == 0:
+            self.setStyleSheet('border-left: 2px solid #272343')
+
+
 class UI(QWidget):
-    def __init__(self, thread):
+    def __init__(self, thread, connections: List[ConnectionInfo]):
         super().__init__()
+        self.connection = ''
         self.t = thread
         self.t.db_list_updated.connect(self.on_dbs_list)
         self.t.query_result.connect(self.on_query_result)
@@ -190,13 +204,9 @@ class UI(QWidget):
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
 
-        # processing = QWidget()
-        # processing.setObjectName('loader')
-
         self.spinner = QtWaitingSpinner(self, False)
         self.spinner.setInnerRadius(-1)
         self.spinner.setObjectName('spinner')
-        # self.spinner.setAttribute(Qt.WA_TranslucentBackground, False)
         self.spinner.setColor('#353b48')
         self.spinner.setBgColor('#eeeeee')
         self.spinner.setNumberOfLines(16)
@@ -205,12 +215,6 @@ class UI(QWidget):
         self.spinner.setLineLength(12)
         self.spinner.setRoundness(10)
         self.spinner.setPadding(5)
-
-        # spinner_layout = QVBoxLayout()
-        # spinner_layout.addWidget(spinner)
-        # processing.setLayout(spinner_layout)
-        # processing.setCursor(Qt.PointingHandCursor)
-        # processing.clicked.connect(self.on_commit_click)
 
         run = QPushButton("Run")
         run.setObjectName('run-btn')
@@ -275,6 +279,19 @@ class UI(QWidget):
 
         self.bottom_layout.addWidget(self.table_and_editor)
 
+        connection_buttons = QHBoxLayout()
+        for idx, connection in enumerate(connections):
+            btn = ConnectionButton(connection.label, idx, self.change_connection)
+            connection_buttons.addWidget(btn)
+
+        new_connection_btn = QPushButton('➕ New connection')
+        new_connection_btn.setObjectName('connection-btn')
+        new_connection_btn.setCursor(Qt.PointingHandCursor)
+        new_connection_btn.clicked.connect(self.on_new_connection)
+        connection_buttons.addWidget(new_connection_btn)
+        connection_buttons.insertStretch(-1)
+
+        self.top_layout.addLayout(connection_buttons)
         self.top_layout.addWidget(self.log_text)
         text_and_button.addWidget(self.db_label_input)
         text_and_button.addWidget(self.textbox)
@@ -304,10 +321,15 @@ class UI(QWidget):
 
         self.spinner.start()
 
-    def on_dbs_list(self, dbs: List[str]) -> None:
+    def on_dbs_list(self, dbs: List[str], connection: str) -> None:
         self.db_list = ListViewModel(dbs, parent=self)
+        self.connection = connection
+        self.update_db_label('')
         self.list.setModel(self.db_list)
         self.open_db_list()
+
+    def on_new_connection(self):
+        pass
 
     def on_tables_list(self, tables: List[str]) -> None:
         self.close_db_list()
@@ -333,9 +355,15 @@ class UI(QWidget):
         self.close_cell_editor()
         self.table.set_data(results)
 
-    def on_use_db(self, db) -> None:
-        self.dbs_label.setText(db)
-        self.db_label_input.setText(db)
+    def update_db_label(self, db: str):
+        text = self.connection
+        if db:
+            text = f'{text}.{db}'
+        self.dbs_label.setText(text)
+        self.db_label_input.setText(text)
+
+    def on_use_db(self, db: str) -> None:
+        self.update_db_label(db)
         self.close_db_list()
 
     def append_to_status(self, text: str) -> None:

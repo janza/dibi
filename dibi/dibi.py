@@ -54,7 +54,7 @@ class SQLParser():
 
 
 class DbThread(QtCore.QObject):
-    db_list_updated = pyqtSignal(list)
+    db_list_updated = pyqtSignal(list, str)
     table_list_updated = pyqtSignal(list)
     error = pyqtSignal(str)
     info = pyqtSignal(str)
@@ -65,6 +65,7 @@ class DbThread(QtCore.QObject):
     running_query = pyqtSignal(bool)
 
     connections: List[ConnectionInfo] = []
+    connection: Optional[ConnectionInfo] = None
     tunnel_server: Optional[SSHTunnelForwarder]
     c: Optional[MySQLdb.connections.Connection]
 
@@ -108,7 +109,7 @@ class DbThread(QtCore.QObject):
         connection = self.connections[connection_id]
         self.running_query.emit(True)
         self.disconnect()
-        self.info.emit(str(f'Connecting to {connection}'))
+        self.info.emit(str(f'Connecting to: {connection}...'))
         tunnel = None
         if connection.ssh_host and connection.ssh_user:
             tunnel = SSHTunnelForwarder(
@@ -124,16 +125,18 @@ class DbThread(QtCore.QObject):
             port=connection.port if tunnel is None else tunnel.local_bind_port,
             cursorclass=MySQLdb.cursors.DictCursor
         )
+        self.connection = connection
         self.tunnel_server = tunnel
-        self.info.emit(str(f'Connected to {connection}'))
+        self.info.emit(str(f'Connected to: {connection}.'))
         self.running_query.emit(False)
         self.make_ready()
         self.job.emit('db_list', '', '', {})
 
     def disconnect(self):
+        if self.c is not None:
+            self.c.close()
+
         if self.tunnel_server is not None:
-            if self.c is not None:
-                self.c.close()
             self.tunnel_server.stop()
 
     def process(self, request_type: str, params: str, extra, more) -> None:
@@ -157,7 +160,12 @@ class DbThread(QtCore.QObject):
             self.send_results('select * from `{}`'.format(params))
 
         elif request_type == 'db_list':
-            self.db_list_updated.emit(self.get_db_list())
+            if self.connection is None:
+                return
+            self.db_list_updated.emit(self.get_db_list(), self.connection.label)
+
+        # elif request_type == 'new_connection':
+        #     self.new_connection()
 
         elif request_type == 'get_reference':
             self.get_reference(column=params, value=extra)
@@ -366,7 +374,7 @@ def dibi():
         QtGui.QFontDatabase.addApplicationFont(font)
 
     t = DbThread(connections)
-    widget = UI(t)
+    widget = UI(t, connections)
 
     window = QMainWindow()
     window.layout().setSpacing(0)

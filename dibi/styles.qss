@@ -75,6 +75,9 @@ QPushButton:hover {
     background-color: #353b48;
 }
 
+#connection-btn {
+    border-left: 0;
+}
 
 #run-btn {
     border-right-width: 0px;
