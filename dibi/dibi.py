@@ -327,29 +327,33 @@ AND column_name = %s''',
 
 def load_from_login_path():
     p = argparse.ArgumentParser()
-    p.add_argument('--login-path')
-    args = p.parse_args()
+    p.add_argument('--login-path', required=False)
+    args, rest = p.parse_known_args()
     if not args.login_path:
-        return True, {}
+        return True, {}, rest
 
     try:
-        return False, myloginpath.parse(args.login_path)
-    except configparser.NoSectionError:
-        print('Invalid --login-path')
-        return False, {}
+        return False, myloginpath.parse(args.login_path), rest
+    except configparser.NoSectionError as err:
+        print(err)
+    except FileNotFoundError as err:
+        print(err)
+
+    return True, {}, rest
 
 
 def dibi():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     conf = {}
+    rest = None
     connection_required = True
     if myloginpath_supported:
-        connection_required, conf = load_from_login_path()
+        connection_required, conf, rest = load_from_login_path()
 
     config = ConfigurationParser(path.expanduser('~/.dibi.ini'))
     connections = config.connections
 
-    connection_required = not bool(connections)
+    connection_required = connection_required and not bool(connections)
 
     p = argparse.ArgumentParser()
     p.add_argument('--host', required=connection_required)
@@ -357,10 +361,10 @@ def dibi():
     p.add_argument('--password', '-p', required=connection_required)
     p.add_argument('--port', '-P', type=int, default=3306)
     p.set_defaults(**conf)
-    args = p.parse_args()
+    args = p.parse_args(rest)
 
     if args.host is not None:
-        connections = [ConnectionInfo(**vars(args))] + connections
+        connections = [ConnectionInfo(label='default', **vars(args))] + connections
 
     def expand(filename: str) -> str:
         return path.join(path.dirname(__file__), filename)
