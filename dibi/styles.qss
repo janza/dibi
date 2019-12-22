@@ -126,6 +126,7 @@ QListView {
 #sidebar {
     background: #272343;
     color: #ffffff;
+    max-width: 0;
 }
 
 #database_label {
@@ -138,6 +139,7 @@ QListView {
     color: #272343;
     border-right: 2px solid #272343;
     border-left: 2px solid #272343;
+    max-width: 0;
 }
 
 QListView::item {

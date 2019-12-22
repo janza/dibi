@@ -181,7 +181,8 @@ class UI(QWidget):
         self._t = t
 
         self.setObjectName('mainbox')
-        self.db_list_open = True
+        self.db_list_open = False
+        self.table_list_open = False
 
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
@@ -242,9 +243,11 @@ class UI(QWidget):
         self.table.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 
         self.table_list = ListViewModel([], parent=self)
+        self.table_list.setProperty(b'maximumWidth', 0)
 
         self.sidebar = QStackedWidget(parent=self)
         self.sidebar.setObjectName('sidebar')
+        self.sidebar.setProperty(b'maximumWidth', 0)
 
         self.list = QListView(parent=self.sidebar)
         self.list.setObjectName('db_list')
@@ -329,12 +332,14 @@ class UI(QWidget):
         self.open_db_list()
 
     def on_new_connection(self):
+
         pass
 
     def on_tables_list(self, tables: List[str]) -> None:
         self.close_db_list()
         self.table_list = ListViewModel(tables, parent=self)
         self.tablelist.setModel(self.table_list)
+        self.open_table_list()
 
     def on_error(self, error: str) -> None:
         self.append_to_status('<span style="color: red">'+error+'</span>')
@@ -513,6 +518,7 @@ class UI(QWidget):
         self.anim.setDuration(150)
         self.anim.setEndValue(200)
         self.anim.start()
+        self.close_table_list()
 
     def close_db_list(self) -> None:
         if not self.db_list_open:
@@ -523,6 +529,24 @@ class UI(QWidget):
         self.anim.setDuration(150)
         self.anim.setEndValue(30)
         self.anim.start()
+
+    def open_table_list(self) -> None:
+        if self.table_list_open:
+            return
+        self.table_list_open = True
+        self.tableanim = QPropertyAnimation(self.tablelist, b'maximumWidth')
+        self.tableanim.setDuration(150)
+        self.tableanim.setEndValue(200)
+        self.tableanim.start()
+
+    def close_table_list(self) -> None:
+        if not self.table_list_open:
+            return
+        self.table_list_open = False
+        self.tableanim = QPropertyAnimation(self.tablelist, b'maximumWidth')
+        self.tableanim.setDuration(150)
+        self.tableanim.setEndValue(0)
+        self.tableanim.start()
 
     def show_cell_editor(self, text: str, cb: Callable) -> None:
         self.table_and_editor.setCurrentIndex(1)
