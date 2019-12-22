@@ -88,15 +88,13 @@ class DbThread(QtCore.QObject):
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
     def enqueue(self, request_type, param_a, param_b=None, more=None):
-        while self.c is None:
-            self.sleep(1)
-
         try:
             self.process(request_type, param_a, param_b, more)
         except Exception as err:
             self.error.emit(str(err))
 
     def longRunning(self) -> None:
+        self.make_ready()
         self.connect_to(0)
 
     def make_ready(self):
@@ -116,36 +114,48 @@ class DbThread(QtCore.QObject):
                 (connection.ssh_host, connection.ssh_port),
                 ssh_username=connection.ssh_user,
                 remote_bind_address=(connection.host, connection.port))
-            tunnel.start()
+            try:
+                tunnel.start()
+            except Exception as err:
+                self.error.emit(str(err))
+                return
 
-        self.c = MySQLdb.connect(
-            host=connection.host if tunnel is None else '127.0.0.1',
-            user=connection.user,
-            password=connection.password,
-            port=connection.port if tunnel is None else tunnel.local_bind_port,
-            cursorclass=MySQLdb.cursors.DictCursor
-        )
+        try:
+            self.c = MySQLdb.connect(
+                host=connection.host if tunnel is None else '127.0.0.1',
+                user=connection.user,
+                password=connection.password,
+                port=connection.port if tunnel is None else tunnel.local_bind_port,
+                cursorclass=MySQLdb.cursors.DictCursor
+            )
+        except Exception as err:
+            self.error.emit(str(err))
+            return
         self.connection = connection
         self.tunnel_server = tunnel
         self.info.emit(str(f'Connected to: {connection}.'))
         self.running_query.emit(False)
-        self.make_ready()
         self.job.emit('db_list', '', '', {})
 
     def disconnect(self):
         if self.c is not None:
             self.c.close()
+            print('Closed db connection')
 
         if self.tunnel_server is not None:
             self.tunnel_server.stop()
+            print('Closed tunnel')
 
     def process(self, request_type: str, params: str, extra, more) -> None:
         if request_type == 'disconnect':
             self.disconnect()
             self.exit()
 
-        if request_type == 'change_connection':
+        elif request_type == 'change_connection':
             self.connect_to(int(params))
+
+        elif self.c is None:
+            self.error.emit('No active connection')
 
         elif request_type == 'query':
             self.send_results(params)
@@ -171,16 +181,10 @@ class DbThread(QtCore.QObject):
             self.get_reference(column=params, value=extra)
 
         elif request_type == 'commit':
-            if self.c is not None:
-                self.c.commit()
-            else:
-                self.error.emit('No connection')
+            self.c.commit()
 
         elif request_type == 'rollback':
-            if self.c is not None:
-                self.c.rollback()
-            else:
-                self.error.emit('No connection')
+            self.c.rollback()
 
         elif request_type == 'update':
             self.update_record(record=more, column_name=params, value=extra)
