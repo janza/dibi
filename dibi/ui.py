@@ -13,12 +13,64 @@ from PyQt5.QtWidgets import QTableWidget,\
     QItemDelegate,\
     QSizePolicy,\
     QStackedWidget,\
-    QPushButton
+    QPushButton, \
+    QFormLayout, \
+    QSpinBox
 from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread, QModelIndex
 from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
 from dibi.configuration import ConnectionInfo
 from dibi.waitingspinnerwidget import QtWaitingSpinner
+
+
+class NewConnectionEditor(QWidget):
+    objectName = 'newConnectionEditor'
+    cb: Callable[[ConnectionInfo], None]
+
+    def __init__(self, parent, cb: Callable[[ConnectionInfo], None]):
+        super().__init__(parent=parent)
+        layout = QFormLayout()
+        self.cb = cb
+        self.label = QLineEdit()
+        self.label.setText('127.0.0.1')
+        self.host = QLineEdit()
+        self.host.setText('127.0.0.1')
+        self.user = QLineEdit()
+        self.user.setText('root')
+        self.port = QSpinBox()
+        self.port.setMaximum(65535)
+        self.port.setMinimum(1)
+        self.port.setValue(3306)
+        self.password = QLineEdit()
+        self.password.setEchoMode(QLineEdit.Password)
+        self.sshHost = QLineEdit()
+        self.sshUser = QLineEdit()
+        self.add = QPushButton('Add')
+        self.add.clicked.connect(self.on_click)
+        layout.addRow(QLabel("Label:"), self.label)
+        layout.addRow(QLabel("Host:"), self.host)
+        layout.addRow(QLabel("Port:"), self.port)
+        layout.addRow(QLabel("User:"), self.user)
+        layout.addRow(QLabel("Password:"), self.password)
+        layout.addRow(QLabel("SSH host (optional):"), self.sshHost)
+        layout.addRow(QLabel("SSH user (optional):"), self.sshUser)
+        layout.addRow(self.add)
+        self.setLayout(layout)
+
+    def on_click(self):
+        self.cb(
+            ConnectionInfo(
+                self.label.text(),
+                self.host.text(),
+                self.port.value(),
+                self.user.text(),
+                self.password.text(),
+                '',
+                self.sshHost.text(),
+                22,
+                self.sshUser.text(),
+            )
+        )
 
 
 class CellEditorContainer(QWidget):
@@ -165,6 +217,7 @@ class UI(QWidget):
     def __init__(self, thread, connections: List[ConnectionInfo]):
         super().__init__()
         self.connection = ''
+        self.connections = connections
         self.t = thread
         self.t.db_list_updated.connect(self.on_dbs_list)
         self.t.query_result.connect(self.on_query_result)
@@ -275,26 +328,19 @@ class UI(QWidget):
         self.bottom_layout.addWidget(self.tablelist)
 
         self.cellEditorContainer = CellEditorContainer(parent=self)
+        self.newConnectionEditor = NewConnectionEditor(self, self.onNewConnection)
 
         self.table_and_editor = QStackedWidget(parent=self)
         self.table_and_editor.addWidget(self.table)
         self.table_and_editor.addWidget(self.cellEditorContainer)
+        self.table_and_editor.addWidget(self.newConnectionEditor)
 
         self.bottom_layout.addWidget(self.table_and_editor)
 
-        connection_buttons = QHBoxLayout()
-        for idx, connection in enumerate(connections):
-            btn = ConnectionButton(connection.label, idx, self.change_connection)
-            connection_buttons.addWidget(btn)
+        self.connection_buttons = QHBoxLayout()
+        self.render_connection_buttons()
 
-        new_connection_btn = QPushButton('➕ New connection')
-        new_connection_btn.setObjectName('connection-btn')
-        new_connection_btn.setCursor(Qt.PointingHandCursor)
-        new_connection_btn.clicked.connect(self.on_new_connection)
-        connection_buttons.addWidget(new_connection_btn)
-        connection_buttons.insertStretch(-1)
-
-        self.top_layout.addLayout(connection_buttons)
+        self.top_layout.addLayout(self.connection_buttons)
         self.top_layout.addWidget(self.log_text)
         text_and_button.addWidget(self.db_label_input)
         text_and_button.addWidget(self.textbox)
@@ -316,6 +362,22 @@ class UI(QWidget):
 
         self.installEventFilter(self)
         self.textbox.installEventFilter(self)
+        if self.connections:
+            self.t.job.emit('new_connection', '', '', self.connections[0].toDict())
+
+    def render_connection_buttons(self) -> None:
+        for i in reversed(range(self.connection_buttons.count())):
+            self.connection_buttons.removeItem(self.connection_buttons.itemAt(i))
+        for idx, connection in enumerate(self.connections):
+            btn = ConnectionButton(connection.label, idx, self.change_connection)
+            self.connection_buttons.addWidget(btn)
+
+        new_connection_btn = QPushButton('➕ New connection')
+        new_connection_btn.setObjectName('connection-btn')
+        new_connection_btn.setCursor(Qt.PointingHandCursor)
+        new_connection_btn.clicked.connect(self.on_new_connection)
+        self.connection_buttons.addWidget(new_connection_btn)
+        self.connection_buttons.insertStretch(-1)
 
     def on_query_op(self, isRunning: bool) -> None:
         if not isRunning:
@@ -332,8 +394,14 @@ class UI(QWidget):
         self.open_db_list()
 
     def on_new_connection(self):
+        self.close_db_list()
+        self.close_table_list()
+        self.table_and_editor.setCurrentIndex(2)
 
-        pass
+    def onNewConnection(self, connectionInfo: ConnectionInfo):
+        self.connections.append(connectionInfo)
+        self.render_connection_buttons()
+        self.t.job.emit('new_connection', '', '', connectionInfo.toDict())
 
     def on_tables_list(self, tables: List[str]) -> None:
         self.close_db_list()
@@ -383,7 +451,7 @@ class UI(QWidget):
             self.textbox.setText(self.history[self.history_cursor % hl])
 
     def change_connection(self, connection_id: int) -> None:
-        self.t.job.emit('change_connection', str(connection_id), '', {})
+        self.t.job.emit('new_connection', '', '', self.connections[connection_id].toDict())
 
     def eventFilter(self, source, event: QEvent):
         if event.type() == QEvent.KeyPress:

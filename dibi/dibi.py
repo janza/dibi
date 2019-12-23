@@ -76,8 +76,6 @@ class DbThread(QtCore.QObject):
 
     def __init__(self, connections: List[ConnectionInfo]):
         super().__init__()
-        if not connections:
-            raise TypeError('Need at least one connection')
         self.connections = connections
         self.queue: deque = deque([])
         self.table_cache: Dict[str, List[str]] = {}
@@ -104,7 +102,12 @@ class DbThread(QtCore.QObject):
         self.is_ready = True
 
     def connect_to(self, connection_id: int):
+        if not self.connections:
+            return
         connection = self.connections[connection_id]
+        self.connect_to_info(connection)
+
+    def connect_to_info(self, connection: ConnectionInfo):
         self.running_query.emit(True)
         self.disconnect()
         self.info.emit(str(f'Connecting to: {connection}...'))
@@ -154,6 +157,9 @@ class DbThread(QtCore.QObject):
         elif request_type == 'change_connection':
             self.connect_to(int(params))
 
+        elif request_type == 'new_connection':
+            self.connect_to_info(ConnectionInfo(**more))
+
         elif self.c is None:
             self.error.emit('No active connection')
 
@@ -173,9 +179,6 @@ class DbThread(QtCore.QObject):
             if self.connection is None:
                 return
             self.db_list_updated.emit(self.get_db_list(), self.connection.label)
-
-        # elif request_type == 'new_connection':
-        #     self.new_connection()
 
         elif request_type == 'get_reference':
             self.get_reference(column=params, value=extra)
@@ -381,7 +384,7 @@ def dibi():
     ]:
         QtGui.QFontDatabase.addApplicationFont(font)
 
-    t = DbThread(connections)
+    t = DbThread([])
     widget = UI(t, connections)
 
     window = QMainWindow()

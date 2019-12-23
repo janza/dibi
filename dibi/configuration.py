@@ -1,4 +1,5 @@
-from dataclasses import dataclass, field
+from typing import Dict
+from dataclasses import dataclass, field, asdict
 from configparser import ConfigParser
 import subprocess
 
@@ -19,6 +20,9 @@ class ConnectionInfo:
         self.port = int(self.port)
         if self.password_cmd:
             self.password = subprocess.check_output(self.password_cmd, shell=True).decode().strip()
+
+    def toDict(self) -> Dict[str, str]:
+        return asdict(self)
 
     def __str__(self):
         return f'{self.host}:{self.port} {self.user} through {self.ssh_user}@{self.ssh_host}:{self.ssh_port}'
