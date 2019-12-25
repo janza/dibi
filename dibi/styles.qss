@@ -145,7 +145,7 @@ QListView {
 
 #table_list {
     background: #dce5f4;
-    color: #272343;
+    color: #131313;
     border-right: 2px solid #272343;
     border-left: 2px solid #272343;
     max-width: 0;
