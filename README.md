@@ -1,4 +1,4 @@
-# DiBi
+![Dibi](https://raw.githubusercontent.com/janza/dibi/master/dibi.png)
 
 Utilitarian cross-platform MySQL GUI client
 
