@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import QTableWidget,\
 from PyQt5.QtCore import pyqtSlot, Qt, QAbstractListModel, QVariant, QEvent, QMargins, QPropertyAnimation, pyqtSignal, QThread, QModelIndex
 from PyQt5.QtGui import QGuiApplication, QTextCursor, QPainter
 
-from dibi.configuration import ConnectionInfo
+from dibi.configuration import ConnectionInfo, ConfigurationParser
 from dibi.waitingspinnerwidget import QtWaitingSpinner
 
 
@@ -32,23 +32,22 @@ class NewConnectionEditor(QWidget):
         self.cb = cb
         self.setObjectName(self.objectName)
         self.label = QLineEdit()
-        self.label.setText('127.0.0.1')
         self.host = QLineEdit()
-        self.host.setText('127.0.0.1')
         self.user = QLineEdit()
         self.user.setText('root')
         self.port = QSpinBox()
         self.port.setMaximum(65535)
         self.port.setMinimum(1)
-        self.port.setValue(3306)
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
         self.password_cmd = QLineEdit()
         self.sshHost = QLineEdit()
         self.sshUser = QLineEdit()
-        self.add = QPushButton('Add')
+        self.add = QPushButton('Add connection')
+        self.add.setObjectName('addConnectionBtn')
         self.add.setCursor(Qt.PointingHandCursor)
         self.add.clicked.connect(self.on_click)
+        self.set_defaults()
         layout.addRow(QLabel("Label:"), self.label)
         layout.addRow(QLabel("Host:"), self.host)
         layout.addRow(QLabel("Port:"), self.port)
@@ -60,6 +59,16 @@ class NewConnectionEditor(QWidget):
         layout.addRow(self.add)
         self.setLayout(layout)
 
+    def set_defaults(self):
+        self.label.setText('localhost')
+        self.host.setText('127.0.0.1')
+        self.port.setValue(3306)
+        self.user.setText('')
+        self.password.setText('')
+        self.password_cmd.setText('')
+        self.sshHost.setText('')
+        self.sshUser.setText('')
+
     def on_click(self):
         self.cb(
             ConnectionInfo(
@@ -68,26 +77,30 @@ class NewConnectionEditor(QWidget):
                 self.port.value(),
                 self.user.text(),
                 self.password.text(),
-                '',
+                self.password_cmd.text(),
                 self.sshHost.text(),
                 22,
                 self.sshUser.text(),
             )
         )
+        self.set_defaults()
 
 
 class ConnectionManager(QWidget):
+    connections: List[ConnectionInfo]
+
     def __init__(self, parent, new_connection_editor: NewConnectionEditor, on_delete: Callable[[int], None]):
         super().__init__(parent=parent)
+        self.connections = []
         self.setObjectName('connectionManager')
-        layout = QHBoxLayout()
-        layout.addWidget(new_connection_editor)
+        top_layout = QHBoxLayout()
+        top_layout.addWidget(new_connection_editor)
         self.connection_list = QListView(parent=self)
         delete_button = QPushButton('Delete')
 
         def on_connection_change(_):
             delete_button.setText('Delete')
-            delete_button.setStyleSheet('color: #111')
+            delete_button.setStyleSheet('')
 
         self.connection_list.clicked.connect(on_connection_change)
 
@@ -98,11 +111,11 @@ class ConnectionManager(QWidget):
                 return
             if delete_button.text() == 'Delete':
                 delete_button.setText(f'Press again to delete "{selected.data()}"')
-                delete_button.setStyleSheet('color: #F33')
+                delete_button.setStyleSheet('background-color: #F33')
                 return
             on_delete(selected.row())
             delete_button.setText('Delete')
-            delete_button.setStyleSheet('color: #111')
+            delete_button.setStyleSheet('')
 
         delete_button.setCursor(Qt.PointingHandCursor)
         delete_button.setObjectName('deleteConnectionBtn')
@@ -114,17 +127,24 @@ class ConnectionManager(QWidget):
         right_layout.addStretch()
 
         self.connection_list.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        delete_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        right_layout.setStretch(2, 1)
-        right_layout.setStretch(1, 0)
-        right_layout.setStretch(0, 0)
-        # right_layout.setStretchFactor(0, 1)
-        # right_layout.setStretchFactor(1, 1)
-        # right_layout.setStretchFactor(2, 2)
-        layout.addLayout(right_layout)
+        top_layout.addLayout(right_layout)
+        save_connections = QPushButton('Save connections', parent=self)
+        save_connections.setObjectName('saveConnectionsBtn')
+        save_connections.setCursor(Qt.PointingHandCursor)
+
+        def on_save_connections(_):
+            config = ConfigurationParser()
+            config.save(self.connections)
+
+        save_connections.clicked.connect(on_save_connections)
+
+        layout = QVBoxLayout()
+        layout.addLayout(top_layout)
+        layout.addWidget(save_connections)
         self.setLayout(layout)
 
     def update_connections(self, connections: List[ConnectionInfo]):
+        self.connections = connections
         self.connection_list.setModel(
             ListViewModel([c.label for c in connections], parent=self)
         )
@@ -318,7 +338,7 @@ class UI(QWidget):
         self.spinner.setInnerRadius(-1)
         self.spinner.setObjectName('spinner')
         self.spinner.setColor('#353b48')
-        self.spinner.setBgColor('#eeeeee')
+        self.spinner.setBgColor('#E3E8EB')
         self.spinner.setNumberOfLines(16)
         self.spinner.setRevolutionsPerSecond(1.2)
         self.spinner.setLineWidth(2.5)
@@ -406,7 +426,6 @@ class UI(QWidget):
         self.top_layout.addWidget(self.log_text)
         text_and_button.addWidget(self.db_label_input)
         text_and_button.addWidget(self.textbox)
-        text_and_button.addWidget(self.spinner)
         text_and_button.addWidget(run)
         text_and_button.addWidget(commit)
         text_and_button.addWidget(rollback)
@@ -449,7 +468,8 @@ class UI(QWidget):
             btn = ConnectionButton(connection.label, idx, self.change_connection)
             self.connection_buttons.addWidget(btn)
 
-        self.connection_buttons.insertStretch(-1)
+        self.connection_buttons.addWidget(self.spinner)
+        self.connection_buttons.addStretch()
 
     def on_query_op(self, isRunning: bool) -> None:
         if not isRunning:
@@ -472,8 +492,8 @@ class UI(QWidget):
 
     def onNewConnection(self, connectionInfo: ConnectionInfo):
         self.connections.append(connectionInfo)
+        self.connection_manager.update_connections(self.connections)
         self.render_connection_buttons()
-        self.t.job.emit('new_connection', '', '', connectionInfo.toDict())
 
     def saveConnections(self):
         pass
@@ -526,7 +546,7 @@ class UI(QWidget):
             self.textbox.setText(self.history[self.history_cursor % hl])
 
     def change_connection(self, connection_id: int) -> None:
-        self.t.job.emit('new_connection', '', '', self.connections[connection_id].toDict())
+        self.t.job.emit('connect', '', '', self.connections[connection_id].toDict())
 
     def eventFilter(self, source, event: QEvent):
         if event.type() == QEvent.KeyPress:

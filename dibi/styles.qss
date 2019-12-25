@@ -76,7 +76,10 @@ QPushButton {
 #run-btn:hover,
 #commit-btn:hover,
 #rollback-btn:hover,
-#connection-btn:hover
+#connection-btn:hover,
+#addConnectionBtn:hover,
+#deleteConnectionBtn:hover,
+#saveConnectionsBtn:hover
  {
     color: #eee;
     background-color: #353b48;
@@ -320,6 +323,7 @@ QTableWidget::item:selected {
     padding: 5px 5px;
 }
 
+#saveConnectionsBtn,
 #deleteConnectionBtn {
     font-weight: bold;
     color: #111;

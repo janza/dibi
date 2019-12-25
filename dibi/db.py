@@ -8,9 +8,12 @@ from PyQt5 import QtCore
 import MySQLdb
 import MySQLdb.cursors
 import MySQLdb.connections
-from sshtunnel import SSHTunnelForwarder
+import sshtunnel
 
 from dibi.configuration import ConnectionInfo
+
+
+sshtunnel.SSH_TIMEOUT = 10
 
 
 class SQLParser():
@@ -50,7 +53,7 @@ class DbThread(QtCore.QObject):
     running_query = pyqtSignal(bool)
 
     connection: Optional[ConnectionInfo] = None
-    tunnel_server: Optional[SSHTunnelForwarder]
+    tunnel_server: Optional[sshtunnel.SSHTunnelForwarder]
     c: Optional[MySQLdb.connections.Connection]
 
     job = pyqtSignal(
@@ -72,6 +75,8 @@ class DbThread(QtCore.QObject):
         try:
             self.process(request_type, param_a, param_b, more)
         except Exception as err:
+            if isinstance(err, RuntimeError):
+                pass
             self.error.emit(str(err))
 
     def longRunning(self) -> None:
@@ -89,10 +94,11 @@ class DbThread(QtCore.QObject):
         self.info.emit(str(f'Connecting to: {connection}...'))
         tunnel = None
         if connection.ssh_host and connection.ssh_user:
-            tunnel = SSHTunnelForwarder(
+            tunnel = sshtunnel.SSHTunnelForwarder(
                 (connection.ssh_host, connection.ssh_port),
                 ssh_username=connection.ssh_user,
                 remote_bind_address=(connection.host, connection.port))
+            self.tunnel_server = tunnel
             try:
                 tunnel.start()
             except Exception as err:
@@ -111,7 +117,6 @@ class DbThread(QtCore.QObject):
             self.error.emit(str(err))
             return
         self.connection = connection
-        self.tunnel_server = tunnel
         self.info.emit(str(f'Connected to: {connection}.'))
         self.running_query.emit(False)
         self.job.emit('db_list', '', '', {})
@@ -130,7 +135,7 @@ class DbThread(QtCore.QObject):
             self.disconnect()
             self.exit()
 
-        elif request_type == 'new_connection':
+        elif request_type == 'connect':
             self.connect_to_info(ConnectionInfo(**more))
 
         elif self.c is None:

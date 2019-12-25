@@ -45,7 +45,7 @@ def dibi():
     if myloginpath_supported:
         connection_required, conf, rest = load_from_login_path()
 
-    config = ConfigurationParser(path.expanduser('~/.dibi.ini'))
+    config = ConfigurationParser()
     connections = config.connections
 
     connection_required = connection_required and not bool(connections)
