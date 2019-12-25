@@ -320,4 +320,23 @@ QTableWidget::item:selected {
     padding: 5px 5px;
 }
 
+#deleteConnectionBtn {
+    font-weight: bold;
+    color: #111;
+    background: #fff;
+    border: 1px solid #1B4060;
+    height: 20px;
+    padding: 5px 5px;
+}
+
+#connectionManager QListView {
+    color: #111;
+    font-weight: bold;
+}
+
+#connectionManager QListView::item:selected {
+    background: #1B4060;
+    color: #fff;
+    text-decoration: underline;
+}
 

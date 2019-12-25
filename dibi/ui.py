@@ -43,15 +43,18 @@ class NewConnectionEditor(QWidget):
         self.port.setValue(3306)
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
+        self.password_cmd = QLineEdit()
         self.sshHost = QLineEdit()
         self.sshUser = QLineEdit()
         self.add = QPushButton('Add')
+        self.add.setCursor(Qt.PointingHandCursor)
         self.add.clicked.connect(self.on_click)
         layout.addRow(QLabel("Label:"), self.label)
         layout.addRow(QLabel("Host:"), self.host)
         layout.addRow(QLabel("Port:"), self.port)
         layout.addRow(QLabel("User:"), self.user)
         layout.addRow(QLabel("Password:"), self.password)
+        layout.addRow(QLabel("Password command (optional):"), self.password_cmd)
         layout.addRow(QLabel("SSH host (optional):"), self.sshHost)
         layout.addRow(QLabel("SSH user (optional):"), self.sshUser)
         layout.addRow(self.add)
@@ -74,8 +77,57 @@ class NewConnectionEditor(QWidget):
 
 
 class ConnectionManager(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, new_connection_editor: NewConnectionEditor, on_delete: Callable[[int], None]):
         super().__init__(parent=parent)
+        self.setObjectName('connectionManager')
+        layout = QHBoxLayout()
+        layout.addWidget(new_connection_editor)
+        self.connection_list = QListView(parent=self)
+        delete_button = QPushButton('Delete')
+
+        def on_connection_change(_):
+            delete_button.setText('Delete')
+            delete_button.setStyleSheet('color: #111')
+
+        self.connection_list.clicked.connect(on_connection_change)
+
+        def on_delete_click(_):
+            try:
+                selected = self.connection_list.selectedIndexes().pop()
+            except IndexError:
+                return
+            if delete_button.text() == 'Delete':
+                delete_button.setText(f'Press again to delete "{selected.data()}"')
+                delete_button.setStyleSheet('color: #F33')
+                return
+            on_delete(selected.row())
+            delete_button.setText('Delete')
+            delete_button.setStyleSheet('color: #111')
+
+        delete_button.setCursor(Qt.PointingHandCursor)
+        delete_button.setObjectName('deleteConnectionBtn')
+        delete_button.clicked.connect(on_delete_click)
+
+        right_layout = QVBoxLayout()
+        right_layout.addWidget(self.connection_list)
+        right_layout.addWidget(delete_button)
+        right_layout.addStretch()
+
+        self.connection_list.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        delete_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        right_layout.setStretch(2, 1)
+        right_layout.setStretch(1, 0)
+        right_layout.setStretch(0, 0)
+        # right_layout.setStretchFactor(0, 1)
+        # right_layout.setStretchFactor(1, 1)
+        # right_layout.setStretchFactor(2, 2)
+        layout.addLayout(right_layout)
+        self.setLayout(layout)
+
+    def update_connections(self, connections: List[ConnectionInfo]):
+        self.connection_list.setModel(
+            ListViewModel([c.label for c in connections], parent=self)
+        )
 
 
 class CellEditorContainer(QWidget):
@@ -332,12 +384,18 @@ class UI(QWidget):
         self.bottom_layout.addWidget(self.tablelist)
 
         self.cellEditorContainer = CellEditorContainer(parent=self)
-        self.newConnectionEditor = NewConnectionEditor(self, self.onNewConnection)
+
+        self.connection_manager = ConnectionManager(
+            self,
+            NewConnectionEditor(self, self.onNewConnection),
+            self.on_delete_connection
+        )
+        self.connection_manager.update_connections(self.connections)
 
         self.table_and_editor = QStackedWidget(parent=self)
         self.table_and_editor.addWidget(self.table)
         self.table_and_editor.addWidget(self.cellEditorContainer)
-        self.table_and_editor.addWidget(self.newConnectionEditor)
+        self.table_and_editor.addWidget(self.connection_manager)
 
         self.bottom_layout.addWidget(self.table_and_editor)
 
@@ -369,11 +427,20 @@ class UI(QWidget):
         if self.connections:
             self.change_connection(0)
 
+    def on_delete_connection(self, index: int):
+        self.connections.pop(index)
+        self.connection_manager.update_connections(self.connections)
+        self.render_connection_buttons()
+
     def render_connection_buttons(self) -> None:
         for i in reversed(range(self.connection_buttons.count())):
-            self.connection_buttons.removeItem(self.connection_buttons.itemAt(i))
+            w = self.connection_buttons.takeAt(i)
+            try:
+                w.widget().deleteLater()
+            except AttributeError:
+                pass
 
-        new_connection_btn = QPushButton('Connections ...')
+        new_connection_btn = QPushButton('Manage Connections ...', parent=self)
         new_connection_btn.setObjectName('connection-btn')
         new_connection_btn.setCursor(Qt.PointingHandCursor)
         new_connection_btn.clicked.connect(self.on_new_connection)
