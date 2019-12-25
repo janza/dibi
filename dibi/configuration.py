@@ -34,7 +34,7 @@ class ConfigurationParser():
 
     def __init__(self, filepath: str = ''):
         if not filepath:
-            filepath = path.expanduser('~/.dibi.ini')
+            filepath = path.expanduser('~/.dibi.conf')
         self.filepath = filepath
 
     @property

@@ -54,7 +54,14 @@ QTextEdit {
     padding: 7px;
 }
 
-#connection_db_label, #run-btn, #connection-btn, #rollback-btn, #commit-btn, #query_editor
+#save-change-btn,
+#cancel-change-btn,
+#connection_db_label,
+#run-btn,
+#connection-btn,
+#rollback-btn,
+#commit-btn,
+#query_editor
 {
     font-size: 14px;
     line-height: 14px;
@@ -63,6 +70,11 @@ QTextEdit {
     background: #fffffe;
     border: 2px solid #272343;
     border-bottom: none;
+}
+
+#save-change-btn,
+#cancel-change-btn {
+    border-left: none;
 }
 
 #top QLabel {
@@ -79,8 +91,7 @@ QPushButton {
 #connection-btn:hover,
 #addConnectionBtn:hover,
 #deleteConnectionBtn:hover,
-#saveConnectionsBtn:hover
- {
+#saveConnectionsBtn:hover {
     color: #eee;
     background-color: #353b48;
 }
