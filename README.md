@@ -1,6 +1,17 @@
-# dibi
+# DiBi
 
 Utilitarian cross-platform MySQL GUI client
+
+# Features
+
+- No auto-commit
+- Basic autocomplete of databases and tables
+- Export output of queries to other programs - using `-- !program`, eg: `SELECT * FROM table -- !cat > output.txt` will save the output of the select query to output.txt
+- Change existing values using GUI
+- Cmd/Alt + Click on a foreign key opens the referenced row
+- Cmd/Alt + Click on a table shows column details of the table
+- GUI Connection manager
+- AUR package `dibi-git`
 
 # Usage
 
@@ -23,16 +34,6 @@ Otherwise connections can be configured with a config file at: `~/.dibi.conf`. A
     ...
 
 GUI interface can also be used to configure connections.
-
-# Features
-
-- No auto-commit
-- Basic autocomplete of databases and tables
-- Export output of queries to other programs - using `-- !program`, eg: `SELECT * FROM table -- !cat > output.txt` will save the output of the select query to output.txt
-- Change existing values using GUI
-- Cmd/Alt + Click on a foreign key opens the referenced row
-- Cmd/Alt + Click on a table shows column details of the table
-- GUI Connection manager
 
 ## Todo
 
