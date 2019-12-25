@@ -63,7 +63,7 @@ class ConfigurationParser():
                 'host': connection.host,
                 'port': str(connection.port),
                 'user': connection.user,
-                'password': connection.password,
+                'password': connection.password if not connection.password_cmd else '',
                 'password_cmd': connection.password_cmd,
                 'ssh_host': connection.ssh_host,
                 'ssh_user': connection.ssh_user,
