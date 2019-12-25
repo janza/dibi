@@ -1,6 +1,6 @@
 # dibi
 
-Utilitarian MySQL GUI client
+Utilitarian cross-platform MySQL GUI client
 
 # Usage
 
