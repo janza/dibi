@@ -25,12 +25,12 @@ from dibi.waitingspinnerwidget import QtWaitingSpinner
 
 class NewConnectionEditor(QWidget):
     objectName = 'newConnectionEditor'
-    cb: Callable[[ConnectionInfo], None]
 
     def __init__(self, parent, cb: Callable[[ConnectionInfo], None]):
         super().__init__(parent=parent)
         layout = QFormLayout()
         self.cb = cb
+        self.setObjectName(self.objectName)
         self.label = QLineEdit()
         self.label.setText('127.0.0.1')
         self.host = QLineEdit()
@@ -71,6 +71,11 @@ class NewConnectionEditor(QWidget):
                 self.sshUser.text(),
             )
         )
+
+
+class ConnectionManager(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent=parent)
 
 
 class CellEditorContainer(QWidget):
@@ -204,13 +209,9 @@ class VertLabel(QWidget):
 class ConnectionButton(QPushButton):
     def __init__(self, label: str, index: int, on_click_cb: Callable):
         super().__init__(label)
-        # self.index = index
-        # self.on_click_cb = on_click_cb
         self.clicked.connect(lambda x: on_click_cb(index))
         self.setObjectName('connection-btn')
         self.setCursor(Qt.PointingHandCursor)
-        if index == 0:
-            self.setStyleSheet('border-left: 2px solid #272343')
 
 
 class UI(QWidget):
@@ -243,7 +244,9 @@ class UI(QWidget):
         self.log_text.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
 
         self.db_label_input = QLabel('')
+        self.db_label_input.setObjectName('connection_db_label')
         self.textbox = QLineEdit(parent=self)
+        self.textbox.setObjectName('query_editor')
         self.textbox.returnPressed.connect(self.run_query)
 
         self.layout = QVBoxLayout()
@@ -254,6 +257,7 @@ class UI(QWidget):
         self.top.setObjectName('top')
         self.top_layout = QVBoxLayout()
         self.top_layout.setSpacing(0)
+        self.top_layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.top.setLayout(self.top_layout)
         text_and_button = QHBoxLayout()
         text_and_button.setSpacing(0)
@@ -363,20 +367,21 @@ class UI(QWidget):
         self.installEventFilter(self)
         self.textbox.installEventFilter(self)
         if self.connections:
-            self.t.job.emit('new_connection', '', '', self.connections[0].toDict())
+            self.change_connection(0)
 
     def render_connection_buttons(self) -> None:
         for i in reversed(range(self.connection_buttons.count())):
             self.connection_buttons.removeItem(self.connection_buttons.itemAt(i))
-        for idx, connection in enumerate(self.connections):
-            btn = ConnectionButton(connection.label, idx, self.change_connection)
-            self.connection_buttons.addWidget(btn)
 
-        new_connection_btn = QPushButton('➕ New connection')
+        new_connection_btn = QPushButton('Connections ...')
         new_connection_btn.setObjectName('connection-btn')
         new_connection_btn.setCursor(Qt.PointingHandCursor)
         new_connection_btn.clicked.connect(self.on_new_connection)
         self.connection_buttons.addWidget(new_connection_btn)
+        for idx, connection in enumerate(self.connections):
+            btn = ConnectionButton(connection.label, idx, self.change_connection)
+            self.connection_buttons.addWidget(btn)
+
         self.connection_buttons.insertStretch(-1)
 
     def on_query_op(self, isRunning: bool) -> None:
@@ -402,6 +407,9 @@ class UI(QWidget):
         self.connections.append(connectionInfo)
         self.render_connection_buttons()
         self.t.job.emit('new_connection', '', '', connectionInfo.toDict())
+
+    def saveConnections(self):
+        pass
 
     def on_tables_list(self, tables: List[str]) -> None:
         self.close_db_list()

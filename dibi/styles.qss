@@ -6,8 +6,7 @@ QMainWindow {
 QWidget {
     color: #bae8e8;
     font-family: Cabin, Overpass, Sans;
-    font-weight: 500;
-    background: #f6efef;
+    background: #dce5f4;
     font-size: 14px;
     padding: 0;
     margin: 0;
@@ -55,28 +54,37 @@ QTextEdit {
     padding: 7px;
 }
 
-QPushButton, QLineEdit, QLabel {
+#connection_db_label, #run-btn, #connection-btn, #rollback-btn, #commit-btn, #query_editor
+{
     font-size: 14px;
     line-height: 14px;
     color: #272343;
     padding: 7px 15px;
     background: #fffffe;
     border: 2px solid #272343;
+    border-bottom: none;
+}
+
+#top QLabel {
+    border-left: none;
 }
 
 QPushButton {
     font-weight: bold;
-    text-transform: uppercase;
 }
 
-QPushButton:hover {
-
+#run-btn:hover,
+#commit-btn:hover,
+#rollback-btn:hover,
+#connection-btn:hover
+ {
     color: #eee;
     background-color: #353b48;
 }
 
 #connection-btn {
-    border-left: 0;
+    border-left: none;
+    border-bottom: 2px solid #272343;
 }
 
 #run-btn {
@@ -91,11 +99,12 @@ QPushButton:hover {
 
 #rollback-btn {
     border-left-width: 0px;
+    border-right-width: 0px;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
 }
 
-QLineEdit {
+#query_editor {
     border-right-width: 0;
     border-left-width: 0;
     padding: 6px 7px;
@@ -115,7 +124,7 @@ QListView {
     /* selection-color: transparent; */
     outline: 0;
     padding: 0 0;
-    font-weight: bold;
+    /* font-weight: bold; */
 }
 
 #db_list {
@@ -135,7 +144,7 @@ QListView {
 }
 
 #table_list {
-    background: #faeee7;
+    background: #dce5f4;
     color: #272343;
     border-right: 2px solid #272343;
     border-left: 2px solid #272343;
@@ -177,7 +186,7 @@ QListView::item {
 
 #table_list::item::pressed {
     background: #bae8e8;
-    font-weight: bold;
+    /* font-weight: bold; */
 }
 
 QTableWidget {
@@ -289,6 +298,26 @@ QTableWidget::item:selected:active {
 QTableWidget::item:selected {
     color: #fff;
     background-color: #1B4060;
+}
+
+#newConnectionEditor QFormLayout {
+    background: #111;
+}
+
+#newConnectionEditor QLabel {
+    color: #111;
+    background: transparent;
+}
+
+#newConnectionEditor QPushButton,
+#newConnectionEditor QSpinBox,
+#newConnectionEditor QLineEdit {
+    font-weight: bold;
+    color: #111;
+    background: #fff;
+    border: 1px solid #1B4060;
+    height: 20px;
+    padding: 5px 5px;
 }
 
 
