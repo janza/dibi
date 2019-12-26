@@ -1,5 +1,6 @@
 import re
 import subprocess
+from os import path
 from typing import List, Dict, Iterator, Optional, Tuple, Union
 from collections import deque
 
@@ -97,6 +98,7 @@ class DbThread(QtCore.QObject):
             tunnel = sshtunnel.SSHTunnelForwarder(
                 (connection.ssh_host, connection.ssh_port),
                 ssh_username=connection.ssh_user,
+                ssh_pkey=path.expanduser('~/.ssh/id_rsa'),
                 remote_bind_address=(connection.host, connection.port))
             self.tunnel_server = tunnel
             try:
