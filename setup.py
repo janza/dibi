@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 from setuptools import setup
+from pip.req import parse_requirements
+
+install_reqs = parse_requirements('requirements.txt')
 
 setup(
     name='dibi',
@@ -19,10 +22,10 @@ setup(
         'PyQt5',
         'mysqlclient',
         'dibi',
+        'sshtunnel'
     ],
     extras_require={
         'myloginpath': ['myloginpath'],
-        'sshtunnel': ['paramiko', 'sshtunnel'],
     },
     entry_points={
         'console_scripts': [
