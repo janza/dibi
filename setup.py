@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-
 from setuptools import setup
-from pip.req import parse_requirements
-
-install_reqs = parse_requirements('requirements.txt')
 
 setup(
     name='dibi',
@@ -18,7 +14,12 @@ setup(
     package_data={
         'dibi': ['fonts/*', 'styles.qss'],
     },
-    install_requires=install_reqs,
+    install_requires=[
+        'PyQt5',
+        'mysqlclient',
+        'sshtunnel',
+        'dibi',
+    ],
     extras_require={
         'myloginpath': ['myloginpath'],
     },
