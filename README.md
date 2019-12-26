@@ -1,4 +1,4 @@
-![Dibi](https://raw.githubusercontent.com/janza/dibi/e9e0cb8d6e9dc48233bdde16594731ccb5aaf4f5/dibi.png)
+![Dibi](https://raw.githubusercontent.com/janza/dibi/7608d161d16217243322d7ff7d2f996ae3c0b046/dibi.png)
 
 Utilitarian cross-platform MySQL GUI client
 
@@ -45,3 +45,6 @@ GUI interface can also be used to configure connections.
 - [x] Export results
 - [ ] MacOS and windows distribution
 - [ ] Simple scripting options
+
+
+Icons made by [Smashicons](https://www.flaticon.com/authors/smashicons)
