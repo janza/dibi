@@ -3,6 +3,7 @@ import subprocess
 from os import path
 from typing import List, Dict, Iterator, Optional, Tuple, Union
 from collections import deque
+import json
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5 import QtCore
@@ -76,8 +77,6 @@ class DbThread(QtCore.QObject):
         try:
             self.process(request_type, param_a, param_b, more)
         except Exception as err:
-            if isinstance(err, RuntimeError):
-                pass
             self.error.emit(str(err))
 
     def longRunning(self) -> None:
@@ -170,7 +169,8 @@ class DbThread(QtCore.QObject):
             self.c.rollback()
 
         elif request_type == 'update':
-            self.update_record(record=more, column_name=params, value=extra)
+            print(f'Updating {extra}')
+            self.update_record(record=more, column_name=params, value=json.loads(extra))
 
         else:
             print('unknown request_type', request_type)

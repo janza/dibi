@@ -1,4 +1,5 @@
 from typing import List, Tuple, Callable, Dict, Union
+import json
 
 from PyQt5.QtWidgets import QTableWidget,\
     QTableWidgetItem,\
@@ -173,6 +174,7 @@ class CellEditorContainer(QWidget):
         layout.setContentsMargins(QMargins(0, 0, 0, 0))
         layout.setSpacing(0)
         self.cb = None
+        self.cancelCb = None
         self.cellEditor = CellEditor()
         layout.addWidget(self.cellEditor)
 
@@ -183,18 +185,25 @@ class CellEditorContainer(QWidget):
         save.setCursor(Qt.PointingHandCursor)
         self.save = save
 
+        set_null = QPushButton("Set to NULL")
+        set_null.setObjectName('save-change-btn')
+        set_null.setCursor(Qt.PointingHandCursor)
+        self.set_null = set_null
+
         cancel = QPushButton("Cancel")
         cancel.setObjectName('cancel-change-btn')
         cancel.setCursor(Qt.PointingHandCursor)
         self.cancel = cancel
 
         bottom_layout.addWidget(self.save)
+        bottom_layout.addWidget(self.set_null)
         bottom_layout.addWidget(self.cancel)
 
         layout.addLayout(bottom_layout)
         self.setLayout(layout)
 
         self.save.clicked.connect(self.onSaveClick)
+        self.set_null.clicked.connect(self.onSetNullClick)
         self.cancel.clicked.connect(self.onCancelClick)
 
     def setText(self, text):
@@ -204,9 +213,17 @@ class CellEditorContainer(QWidget):
         if self.cb is not None:
             self.cb(self.cellEditor.toPlainText())
 
-    def onCancelClick(self):
+    def onSetNullClick(self):
         if self.cb is not None:
             self.cb(None)
+
+    def onCancelClick(self):
+        if self.cancelCb is not None:
+            self.cancelCb()
+
+    def setCancelCallback(self, cb):
+        self.cancelCb = cb
+        self.cellEditor.setCancelCallback(cb)
 
     def setCallback(self, cb):
         self.cb = cb
@@ -215,6 +232,7 @@ class CellEditorContainer(QWidget):
 
 class CellEditor(QTextEdit):
     cb = None
+    cancelCb = None
     installed = False
 
     def setCallback(self, cb: Callable) -> None:
@@ -223,6 +241,12 @@ class CellEditor(QTextEdit):
             self.installed = True
         self.cb = cb
 
+    def setCancelCallback(self, cb: Callable) -> None:
+        if not self.installed:
+            self.installEventFilter(self)
+            self.installed = True
+        self.cancelCb = cb
+
     def eventFilter(self, source, event):
         if self.cb is None or event.type() != QEvent.KeyPress:
             return QMainWindow.eventFilter(self, source, event)
@@ -230,13 +254,15 @@ class CellEditor(QTextEdit):
         key = event.key()
         modifiers = QGuiApplication.queryKeyboardModifiers()
 
-        if key == Qt.Key_Escape:
-            self.cb(None)
+        if key == Qt.Key_Escape and self.cancelCb is not None:
+            self.cancelCb()
+            self.cancelCb = None
             self.cb = None
             return True
 
-        if key == Qt.Key_Return and modifiers == Qt.ControlModifier:
+        if key == Qt.Key_Return and modifiers == Qt.ControlModifier and self.cb is not None:
             self.cb(self.toPlainText())
+            self.cancelCb = None
             self.cb = None
             return True
         return QMainWindow.eventFilter(self, source, event)
@@ -523,11 +549,11 @@ class UI(QWidget):
         self.open_table_list()
 
     def on_error(self, error: str) -> None:
-        self.append_to_status('<span style="color: red">'+error+'</span>')
+        self.append_to_status('<span style="color: red">' + error + '</span>')
         self.spinner.stop()
 
     def on_info(self, info: str) -> None:
-        self.append_to_status('<span style="color: black">'+info+'</span>')
+        self.append_to_status('<span style="color: black">' + info + '</span>')
 
     def on_query(self, query: str, params) -> None:
         p = ''
@@ -734,11 +760,14 @@ class UI(QWidget):
         self.cellEditorContainer.setText(str(text))
 
         def onEditDone(text):
-            if text is not None:
-                cb(text)
+            cb(text)
+            self.close_cell_editor()
+
+        def onCancel():
             self.close_cell_editor()
 
         self.cellEditorContainer.setCallback(onEditDone)
+        self.cellEditorContainer.setCancelCallback(onCancel)
 
     def close_cell_editor(self) -> None:
         self.table_and_editor.setCurrentIndex(0)
@@ -759,8 +788,8 @@ class UI(QWidget):
     def on_reference_click(self, column_name: str, value: str) -> None:
         self.t.job.emit('get_reference', column_name, value, {})
 
-    def update_record(self, record: Dict['str', 'str'], column_name: str, data: Union[str, int]) -> None:
-        self.t.job.emit('update', column_name, str(data), dict(record))
+    def update_record(self, record: Dict['str', 'str'], column_name: str, data: Union[str, int, None]) -> None:
+        self.t.job.emit('update', column_name, json.dumps(data), dict(record))
 
 
 class TableItem(QTableWidgetItem):
@@ -775,7 +804,7 @@ class TableItem(QTableWidgetItem):
 
     def text(self) -> str:
         if self.record[self.column_name] is None:
-            return 'NULL'
+            return ''
         return str(self.record[self.column_name])
 
 
@@ -834,6 +863,6 @@ class Table(QTableWidget):
                 self.parent.update_record(item.record, item.column_name, newValue)
                 item.record[item.column_name] = newValue
                 item.setText(item.text())
-            self.parent.show_cell_editor(item.record[item.column_name], on_update)
+            self.parent.show_cell_editor(item.text(), on_update)
 
             return
