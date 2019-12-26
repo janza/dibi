@@ -160,8 +160,6 @@ QListView {
 #table_list {
     background: #dce5f4;
     color: #131313;
-    border-right: 2px solid #272343;
-    border-left: 2px solid #272343;
     max-width: 0;
 }
 
@@ -345,13 +343,19 @@ QTableWidget::item:selected {
 }
 
 #connectionManager QListView {
-    color: #111;
     font-weight: bold;
+    color: #111;
+    background: #fff;
+    border: 1px solid #1B4060;
+}
+
+#connectionManager QListView::item {
+    padding: 5px 5px;
+    height: 20px;
 }
 
 #connectionManager QListView::item:selected {
     background: #1B4060;
     color: #fff;
-    text-decoration: underline;
 }
 

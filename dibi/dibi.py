@@ -22,38 +22,34 @@ except Exception:
 
 def load_from_login_path():
     p = argparse.ArgumentParser()
-    p.add_argument('--login-path', required=False)
+    p.add_argument('--login-path')
     args, rest = p.parse_known_args()
-    if not args.login_path:
-        return True, {}, rest
 
-    try:
-        return False, myloginpath.parse(args.login_path), rest
-    except configparser.NoSectionError as err:
-        print(err)
-    except FileNotFoundError as err:
-        print(err)
+    if args.login_path:
+        try:
+            return myloginpath.parse(args.login_path), rest
+        except configparser.NoSectionError as err:
+            print(err)
+        except FileNotFoundError as err:
+            print(err)
 
-    return True, {}, rest
+    return {}, rest
 
 
 def dibi():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     conf = {}
     rest = None
-    connection_required = True
     if myloginpath_supported:
-        connection_required, conf, rest = load_from_login_path()
+        conf, rest = load_from_login_path()
 
     config = ConfigurationParser()
     connections = config.connections
 
-    connection_required = connection_required and not bool(connections)
-
     p = argparse.ArgumentParser()
-    p.add_argument('--host', required=connection_required)
-    p.add_argument('--user', '-u', required=connection_required)
-    p.add_argument('--password', '-p', required=connection_required)
+    p.add_argument('--host')
+    p.add_argument('--user', '-u')
+    p.add_argument('--password', '-p')
     p.add_argument('--port', '-P', type=int, default=3306)
     p.set_defaults(**conf)
     args = p.parse_args(rest)
@@ -73,12 +69,13 @@ def dibi():
         QtGui.QFontDatabase.addApplicationFont(font)
 
     t = DbThread()
-    widget = UI(t, connections)
-
+    widget = UI(t, connections, config)
     window = QMainWindow()
     window.layout().setSpacing(0)
+    window.setMinimumHeight(600)
     window.setCentralWidget(widget)
     window.show()
+    app.setWindowIcon(QtGui.QIcon(expand('dibi.png')))
     app.setStyleSheet(open(expand('styles.qss')).read())
     return_code = app.exec_()
     t.job.emit('disconnect', '', '', {})

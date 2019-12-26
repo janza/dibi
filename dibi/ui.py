@@ -30,6 +30,7 @@ class NewConnectionEditor(QWidget):
     def __init__(self, parent, cb: Callable[[ConnectionInfo], None]):
         super().__init__(parent=parent)
         layout = QFormLayout()
+        layout.setContentsMargins(QMargins(0, 0, 0, 0))
         self.cb = cb
         self.setObjectName(self.objectName)
         self.label = QLineEdit()
@@ -116,6 +117,7 @@ class ConnectionManager(QWidget):
             try:
                 selected = self.connection_list.selectedIndexes().pop()
             except IndexError:
+                self.delete_button.setText('Select a connection to delete')
                 return
             if self.delete_button.text() == 'Delete':
                 self.delete_button.setText(f'Press again to delete "{selected.data()}"')
@@ -130,25 +132,14 @@ class ConnectionManager(QWidget):
         self.delete_button.clicked.connect(on_delete_click)
 
         right_layout = QVBoxLayout()
-        right_layout.addWidget(self.connection_list)
         right_layout.addWidget(self.delete_button)
-        right_layout.addStretch()
+        right_layout.addWidget(self.connection_list)
 
         self.connection_list.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         top_layout.addLayout(right_layout)
-        save_connections = QPushButton('Save connections', parent=self)
-        save_connections.setObjectName('saveConnectionsBtn')
-        save_connections.setCursor(Qt.PointingHandCursor)
-
-        def on_save_connections(_):
-            config = ConfigurationParser()
-            config.save(self.connections)
-
-        save_connections.clicked.connect(on_save_connections)
 
         layout = QVBoxLayout()
         layout.addLayout(top_layout)
-        layout.addWidget(save_connections)
         self.setLayout(layout)
 
     def on_connection_change(self, index):
@@ -326,10 +317,11 @@ class ConnectionButton(QPushButton):
 
 
 class UI(QWidget):
-    def __init__(self, thread, connections: List[ConnectionInfo]):
+    def __init__(self, thread, connections: List[ConnectionInfo], config: ConfigurationParser):
         super().__init__()
         self.connection = ''
         self.connections = connections
+        self.config = config
         self.t = thread
         self.t.db_list_updated.connect(self.on_dbs_list)
         self.t.query_result.connect(self.on_query_result)
@@ -484,10 +476,13 @@ class UI(QWidget):
         self.textbox.installEventFilter(self)
         if self.connections:
             self.change_connection(0)
+        else:
+            self.on_new_connection()
 
     def on_delete_connection(self, index: int):
         self.connections.pop(index)
         self.connection_manager.update_connections(self.connections)
+        self.config.save(self.connections)
         self.render_connection_buttons()
 
     def render_connection_buttons(self) -> None:
@@ -536,11 +531,11 @@ class UI(QWidget):
 
     def onNewConnection(self, connectionInfo: ConnectionInfo):
         self.connections.append(connectionInfo)
+        self.config.save(self.connections)
         self.connection_manager.update_connections(self.connections)
         self.render_connection_buttons()
-
-    def saveConnections(self):
-        pass
+        if len(self.connections) == 1:
+            self.change_connection(0)
 
     def on_tables_list(self, tables: List[str]) -> None:
         self.close_db_list()
@@ -742,6 +737,7 @@ class UI(QWidget):
             return
         self.table_list_open = True
         self.tableanim = QPropertyAnimation(self.tablelist, b'maximumWidth')
+        self.tablelist.setStyleSheet('border-right: 2px solid #272343;')
         self.tableanim.setDuration(150)
         self.tableanim.setEndValue(200)
         self.tableanim.start()
@@ -751,6 +747,7 @@ class UI(QWidget):
             return
         self.table_list_open = False
         self.tableanim = QPropertyAnimation(self.tablelist, b'maximumWidth')
+        self.tablelist.setStyleSheet('border-right: none')
         self.tableanim.setDuration(150)
         self.tableanim.setEndValue(0)
         self.tableanim.start()

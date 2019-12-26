@@ -169,7 +169,6 @@ class DbThread(QtCore.QObject):
             self.c.rollback()
 
         elif request_type == 'update':
-            print(f'Updating {extra}')
             self.update_record(record=more, column_name=params, value=json.loads(extra))
 
         else:
