@@ -18,12 +18,7 @@ setup(
     package_data={
         'dibi': ['fonts/*', 'styles.qss'],
     },
-    install_requires=[
-        'PyQt5',
-        'mysqlclient',
-        'dibi',
-        'sshtunnel'
-    ],
+    install_requires=install_reqs,
     extras_require={
         'myloginpath': ['myloginpath'],
     },
