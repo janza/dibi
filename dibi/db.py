@@ -53,6 +53,7 @@ class DbThread(QtCore.QObject):
     use_db = pyqtSignal(str)
     running_query = pyqtSignal(bool)
     running_query = pyqtSignal(bool)
+    ready_to_connect = pyqtSignal()
 
     connection: Optional[ConnectionInfo] = None
     tunnel_server: Optional[sshtunnel.SSHTunnelForwarder]
@@ -87,6 +88,7 @@ class DbThread(QtCore.QObject):
             return
         self.job.connect(self.enqueue)
         self.is_ready = True
+        self.ready_to_connect.emit()
 
     def connect_to_info(self, connection: ConnectionInfo):
         self.running_query.emit(True)
@@ -121,6 +123,7 @@ class DbThread(QtCore.QObject):
         self.info.emit(str(f'Connected to: {connection}.'))
         self.running_query.emit(False)
         self.job.emit('db_list', '', '', {})
+        self.run_query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED')
 
     def disconnect(self):
         if self.c is not None:

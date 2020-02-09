@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>rollback.png</file>
+    <file>commit.png</file>
+    <file>edit.png</file>
+    <file>close.png</file>
+  </qresource>
+</RCC>
