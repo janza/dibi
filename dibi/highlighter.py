@@ -46,7 +46,6 @@ syntaxhighlighter.py
 #############################################################################
 """
 
-import io
 from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import (QTextCharFormat, QColor, QFont, QSyntaxHighlighter)
 
@@ -76,9 +75,12 @@ class Highlighter(QSyntaxHighlighter):
         keyword_format.setForeground(Qt.darkBlue)
         keyword_format.setFontWeight(QFont.Bold)
 
-        with io.open(
-                r'dibi/completer_data/keywords.txt', 'r', encoding='utf-8') as f:
-            self.plain_keywords = [k.rstrip() for k in f.readlines()]
+        self.plain_keywords = [
+            'and', 'as', 'asc', 'by', 'case', 'desc', 'end',
+            'from', 'group', 'having', 'in', 'in', 'inner',
+            'join', 'left', 'limit', 'not', 'on', 'order',
+            'select', 'where',
+        ]
 
         keyword_patterns = [
             '\\b{0}\\b'.format(plain_keyword)
