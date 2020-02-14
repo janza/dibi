@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple, Union, Optional, Any
 import json
 
 from dibi.configuration import ConnectionInfo
+from dibi.highlighter import Highlighter
 from dibi.db import DbThread
 
 
@@ -708,6 +709,7 @@ class InputBox(QtWidgets.QPlainTextEdit):
         self.db_list: List[str] = []
         self.history_cursor: int = 0
         self.history: List[str] = []
+        self.highlighter = Highlighter(self.document())
 
     def setTables(self, tables: List[str]):
         self.tables_list = tables
