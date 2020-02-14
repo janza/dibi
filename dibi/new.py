@@ -10,8 +10,9 @@ from dibi.db import DbThread
 _translate = QtCore.QCoreApplication.translate
 
 
-class Ui_main(object):
+class Ui_main(QtCore.QObject):
     _connections: List[ConnectionInfo] = []
+    change_connections = QtCore.pyqtSignal(list)
 
     def setupUi(self, main):
         main.setObjectName("main")
@@ -153,130 +154,8 @@ class Ui_main(object):
         self.connection_list_widgets = QtWidgets.QWidget()
         self.verticalLayout.addWidget(self.connection_list_widgets)
         self.gridLayout.addWidget(self.connection_list, 1, 2, 2, 1)
-        self.connection_edit_frame = QtWidgets.QFrame(self.new_connection)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.connection_edit_frame.sizePolicy().hasHeightForWidth())
-        self.connection_edit_frame.setSizePolicy(sizePolicy)
-        self.connection_edit_frame.setStyleSheet("#connection_edit_frame {\n"
-                                                 "background: #Fff;\n"
-                                                 "padding: 10px 14px;\n"
-                                                 "border-radius: 15px;\n"
-                                                 "border-top-right-radius: 0;\n"
-                                                 "}")
-        self.connection_edit_frame.setObjectName("connection_edit_frame")
-        self.formLayout = QtWidgets.QFormLayout(self.connection_edit_frame)
-        self.formLayout.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
-        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.formLayout.setHorizontalSpacing(20)
-        self.formLayout.setObjectName("formLayout")
-        self.label = QtWidgets.QLabel(self.connection_edit_frame)
-        font = QtGui.QFont()
-        font.setBold(True)
-        font.setWeight(75)
-        self.label.setFont(font)
-        self.label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label.setObjectName("label")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
-        self.lineEdit = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit.setText("")
-        self.lineEdit.setObjectName("lineEdit")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.lineEdit)
-        self.label_2 = QtWidgets.QLabel(self.connection_edit_frame)
-        font = QtGui.QFont()
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_2.setFont(font)
-        self.label_2.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_2.setObjectName("label_2")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_2)
-        self.lineEdit_2 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_2.setObjectName("lineEdit_2")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.lineEdit_2)
-        self.label_3 = QtWidgets.QLabel(self.connection_edit_frame)
-        font = QtGui.QFont()
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_3.setFont(font)
-        self.label_3.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_3.setObjectName("label_3")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.label_3)
-        self.lineEdit_3 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_3.setMinimumSize(QtCore.QSize(0, 0))
-        self.lineEdit_3.setObjectName("lineEdit_3")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.lineEdit_3)
-        self.label_4 = QtWidgets.QLabel(self.connection_edit_frame)
-        font = QtGui.QFont()
-        font.setBold(False)
-        font.setWeight(50)
-        self.label_4.setFont(font)
-        self.label_4.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_4.setObjectName("label_4")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.label_4)
-        self.lineEdit_4 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_4.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.lineEdit_4.setClearButtonEnabled(False)
-        self.lineEdit_4.setObjectName("lineEdit_4")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.lineEdit_4)
-        self.label_5 = QtWidgets.QLabel(self.connection_edit_frame)
-        self.label_5.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_5.setObjectName("label_5")
-        self.formLayout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.label_5)
-        self.lineEdit_5 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_5.setObjectName("lineEdit_5")
-        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.lineEdit_5)
-        self.line = QtWidgets.QFrame(self.connection_edit_frame)
-        self.line.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line.setObjectName("line")
-        self.formLayout.setWidget(6, QtWidgets.QFormLayout.SpanningRole, self.line)
-        self.label_6 = QtWidgets.QLabel(self.connection_edit_frame)
-        self.label_6.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_6.setObjectName("label_6")
-        self.formLayout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.label_6)
-        self.lineEdit_6 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_6.setObjectName("lineEdit_6")
-        self.formLayout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.lineEdit_6)
-        self.label_7 = QtWidgets.QLabel(self.connection_edit_frame)
-        self.label_7.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_7.setObjectName("label_7")
-        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.label_7)
-        self.lineEdit_7 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_7.setObjectName("lineEdit_7")
-        self.formLayout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.lineEdit_7)
-        self.label_8 = QtWidgets.QLabel(self.connection_edit_frame)
-        self.label_8.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_8.setObjectName("label_8")
-        self.formLayout.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.label_8)
-        self.lineEdit_8 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_8.setObjectName("lineEdit_8")
-        self.formLayout.setWidget(9, QtWidgets.QFormLayout.FieldRole, self.lineEdit_8)
-        self.line_2 = QtWidgets.QFrame(self.connection_edit_frame)
-        self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line_2.setObjectName("line_2")
-        self.formLayout.setWidget(10, QtWidgets.QFormLayout.SpanningRole, self.line_2)
-        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.formLayout.setItem(11, QtWidgets.QFormLayout.LabelRole, spacerItem4)
-        self.pushButton = QtWidgets.QPushButton(self.connection_edit_frame)
-        font = QtGui.QFont()
-        font.setBold(True)
-        font.setWeight(75)
-        self.pushButton.setFont(font)
-        self.pushButton.setObjectName("pushButton")
-        self.formLayout.setWidget(11, QtWidgets.QFormLayout.FieldRole, self.pushButton)
-        self.label_9 = QtWidgets.QLabel(self.connection_edit_frame)
-        font = QtGui.QFont()
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_9.setFont(font)
-        self.label_9.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-        self.label_9.setObjectName("label_9")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_9)
-        self.lineEdit_9 = QtWidgets.QLineEdit(self.connection_edit_frame)
-        self.lineEdit_9.setObjectName("lineEdit_9")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.lineEdit_9)
+        self.connection_edit_frame = ConnectionEdit(self.new_connection)
+        self.connection_edit_frame.add_connection.connect(self.new_connection_added)
         self.gridLayout.addWidget(self.connection_edit_frame, 1, 1, 4, 1)
         spacerItem5 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.gridLayout.addItem(spacerItem5, 3, 2, 1, 1)
@@ -291,47 +170,70 @@ class Ui_main(object):
         self.retranslateUi(main)
         self.tabs.tabCloseRequested.connect(self.close_tab)
         QtCore.QMetaObject.connectSlotsByName(main)
+        self.connection_list_layout = None
+        self._connection_to_remove = None
 
     def retranslateUi(self, main):
         main.setWindowTitle(_translate("main", "Form"))
         self.connections_label.setText(_translate("main", "CONNECTIONS"))
-        self.label.setText(_translate("main", "Label"))
-        self.lineEdit.setPlaceholderText(_translate("main", "My connection"))
-        self.label_2.setText(_translate("main", "Host"))
-        self.lineEdit_2.setText(_translate("main", "127.0.0.1"))
-        self.label_3.setText(_translate("main", "User"))
-        self.lineEdit_3.setText(_translate("main", "root"))
-        self.label_4.setText(_translate("main", "Password"))
-        self.lineEdit_4.setPlaceholderText(_translate("main", "Password"))
-        self.label_5.setText(_translate("main", "Password command"))
-        self.lineEdit_5.setPlaceholderText(_translate("main", "echo password"))
-        self.label_6.setText(_translate("main", "SSH host"))
-        self.label_7.setText(_translate("main", "SSH user"))
-        self.label_8.setText(_translate("main", "SSH key"))
-        self.pushButton.setText(_translate("main", "Add connection"))
-        self.label_9.setText(_translate("main", "Port"))
-        self.lineEdit_9.setText(_translate("main", "3306"))
         self.tabs.setTabText(self.tabs.indexOf(self.new_connection), _translate("main", "Connections"))
         self.actionbla.setText(_translate("main", "bla"))
         self.actionbla.setShortcut(_translate("main", "Alt+Shift+C"))
 
+    def new_connection_added(self, new_connection: ConnectionInfo):
+        for idx, connection in enumerate(self._connections):
+            if connection.label != new_connection.label:
+                continue
+            self._connections[idx] = new_connection
+            self.setConnections(self._connections)
+            return
+
+        self.setConnections(self._connections + [new_connection])
+
     def setConnections(self, connections: List[ConnectionInfo]):
+        self.change_connections.emit(connections)
+        self.set_connections(connections)
+
+    def set_connections(self, connections: List[ConnectionInfo]):
         self._connections = connections
         self.renderConnections()
 
     def renderConnections(self):
-        layout = QtWidgets.QVBoxLayout(self.connection_list_widgets)
+        if self.connection_list_layout is None:
+            self.connection_list_layout = QtWidgets.QVBoxLayout(self.connection_list_widgets)
+
+        for child in self.connection_list_widgets.children():
+            try:
+                self.connection_list_layout.removeWidget(child)
+            except TypeError:
+                pass
+
         for connection in self._connections:
             widget = ConnectionListLabel(parent=self.connection_list_widgets)
             widget.renderConnectionLabel(connection)
             widget.open_connection.connect(self.openConnection)
-            layout.addWidget(widget)
+            widget.edited.connect(self.editConnection)
+            widget.removed.connect(self.removeConnection)
+            self.connection_list_layout.addWidget(widget)
 
     def close_tab(self, index: int):
         if index < 1:
             return
         self.tabs.children()[index].close()
         self.tabs.removeTab(index)
+
+    def editConnection(self, connection: ConnectionInfo):
+        self.connection_edit_frame.edit(connection)
+
+    def removeConnection(self, connection: ConnectionInfo):
+        if self._connection_to_remove != connection:
+            self._connection_to_remove = connection
+            return
+
+        self.setConnections([
+            x for x in self._connections
+            if x != connection
+        ])
 
     def openConnection(self, connection: ConnectionInfo):
         connection_tab = ConnectionTab()
@@ -1098,3 +1000,198 @@ class TableItem(QtWidgets.QTableWidgetItem):
         if self.record[self.column_name] is None:
             return ''
         return str(self.record[self.column_name])
+
+
+class ConnectionEdit(QtWidgets.QFrame):
+    add_connection = QtCore.pyqtSignal(ConnectionInfo)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+        self.setStyleSheet("#connection_edit_frame {\n"
+                           "background: #Fff;\n"
+                           "padding: 10px 14px;\n"
+                           "border-radius: 15px;\n"
+                           "border-top-right-radius: 0;\n"
+                           "}")
+        self.setObjectName("connection_edit_frame")
+        self.formLayout = QtWidgets.QFormLayout(self)
+        self.formLayout.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.formLayout.setHorizontalSpacing(20)
+        self.formLayout.setObjectName("formLayout")
+        self.label = QtWidgets.QLabel(self)
+        font = QtGui.QFont()
+        font.setBold(True)
+        font.setWeight(75)
+        self.label.setFont(font)
+        self.label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label.setObjectName("label")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
+        self.lineEdit = QtWidgets.QLineEdit(self)
+        self.lineEdit.setText("")
+        self.lineEdit.setObjectName("lineEdit")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.lineEdit)
+        self.label_2 = QtWidgets.QLabel(self)
+        font = QtGui.QFont()
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_2.setFont(font)
+        self.label_2.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_2.setObjectName("label_2")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_2)
+        self.lineEdit_2 = QtWidgets.QLineEdit(self)
+        self.lineEdit_2.setObjectName("lineEdit_2")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.lineEdit_2)
+        self.label_3 = QtWidgets.QLabel(self)
+        font = QtGui.QFont()
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_3.setFont(font)
+        self.label_3.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_3.setObjectName("label_3")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.label_3)
+        self.lineEdit_3 = QtWidgets.QLineEdit(self)
+        self.lineEdit_3.setMinimumSize(QtCore.QSize(0, 0))
+        self.lineEdit_3.setObjectName("lineEdit_3")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.lineEdit_3)
+        self.label_4 = QtWidgets.QLabel(self)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.label_4.setFont(font)
+        self.label_4.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_4.setObjectName("label_4")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.label_4)
+        self.lineEdit_4 = QtWidgets.QLineEdit(self)
+        self.lineEdit_4.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.lineEdit_4.setClearButtonEnabled(False)
+        self.lineEdit_4.setObjectName("lineEdit_4")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.lineEdit_4)
+        self.label_5 = QtWidgets.QLabel(self)
+        self.label_5.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_5.setObjectName("label_5")
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.label_5)
+        self.lineEdit_5 = QtWidgets.QLineEdit(self)
+        self.lineEdit_5.setObjectName("lineEdit_5")
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.lineEdit_5)
+        self.line = QtWidgets.QFrame(self)
+        self.line.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.line.setObjectName("line")
+        self.formLayout.setWidget(6, QtWidgets.QFormLayout.SpanningRole, self.line)
+        self.label_6 = QtWidgets.QLabel(self)
+        self.label_6.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_6.setObjectName("label_6")
+        self.formLayout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.label_6)
+        self.lineEdit_6 = QtWidgets.QLineEdit(self)
+        self.lineEdit_6.setObjectName("lineEdit_6")
+        self.formLayout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.lineEdit_6)
+        self.label_7 = QtWidgets.QLabel(self)
+        self.label_7.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_7.setObjectName("label_7")
+        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.label_7)
+        self.lineEdit_7 = QtWidgets.QLineEdit(self)
+        self.lineEdit_7.setObjectName("lineEdit_7")
+        self.formLayout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.lineEdit_7)
+        self.label_8 = QtWidgets.QLabel(self)
+        self.label_8.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_8.setObjectName("label_8")
+        self.formLayout.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.label_8)
+        self.lineEdit_8 = QtWidgets.QLineEdit(self)
+        self.lineEdit_8.setObjectName("lineEdit_8")
+        self.formLayout.setWidget(9, QtWidgets.QFormLayout.FieldRole, self.lineEdit_8)
+        self.line_2 = QtWidgets.QFrame(self)
+        self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.line_2.setObjectName("line_2")
+        self.formLayout.setWidget(10, QtWidgets.QFormLayout.SpanningRole, self.line_2)
+        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.formLayout.setItem(11, QtWidgets.QFormLayout.LabelRole, spacerItem4)
+        self.pushButton = QtWidgets.QPushButton(self)
+        font = QtGui.QFont()
+        font.setBold(True)
+        font.setWeight(75)
+        self.pushButton.setFont(font)
+        self.pushButton.setObjectName("pushButton")
+        self.formLayout.setWidget(11, QtWidgets.QFormLayout.FieldRole, self.pushButton)
+        self.pushButton.clicked.connect(self.add_connection_click)
+        self.label_9 = QtWidgets.QLabel(self)
+        font = QtGui.QFont()
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_9.setFont(font)
+        self.label_9.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        self.label_9.setObjectName("label_9")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_9)
+        self.lineEdit_9 = QtWidgets.QLineEdit(self)
+        self.lineEdit_9.setObjectName("lineEdit_9")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.lineEdit_9)
+
+        # labels
+        self.label.setText(_translate("main", "Label"))
+        self.lineEdit.setPlaceholderText(_translate("main", "My connection"))
+        self.label_2.setText(_translate("main", "Host"))
+        self.lineEdit_2.setText(_translate("main", "127.0.0.1"))
+        self.label_3.setText(_translate("main", "User"))
+        self.lineEdit_3.setText(_translate("main", "root"))
+        self.label_4.setText(_translate("main", "Password"))
+        self.lineEdit_4.setPlaceholderText(_translate("main", "Password"))
+        self.label_5.setText(_translate("main", "Password command"))
+        self.lineEdit_5.setPlaceholderText(_translate("main", "echo password"))
+        self.label_6.setText(_translate("main", "SSH host"))
+        self.label_7.setText(_translate("main", "SSH port"))
+        self.lineEdit_7.setText(_translate("main", "22"))
+        self.label_8.setText(_translate("main", "SSH user"))
+        self.pushButton.setText(_translate("main", "Add connection"))
+        self.label_9.setText(_translate("main", "Port"))
+        self.lineEdit_9.setText(_translate("main", "3306"))
+
+    def add_connection_click(self):
+        required_empty = False
+        for line_edit, label in [
+            (self.lineEdit, self.label),
+            (self.lineEdit_2, self.label_2),
+            (self.lineEdit_9, self.label_9),
+            (self.lineEdit_3, self.label_3),
+        ]:
+            if line_edit.text() == '':
+                label.setStyleSheet('color: red')
+                required_empty = True
+                continue
+            label.setStyleSheet('')
+
+        if required_empty:
+            return
+
+        self.add_connection.emit(
+            ConnectionInfo(
+                label=self.lineEdit.text(),
+                host=self.lineEdit_2.text(),
+                port=int(self.lineEdit_9.text()),
+                user=self.lineEdit_3.text(),
+                password=self.lineEdit_4.text(),
+                password_cmd=self.lineEdit_5.text(),
+                ssh_host=self.lineEdit_6.text(),
+                ssh_port=int(self.lineEdit_7.text()),
+                ssh_user=self.lineEdit_8.text()
+            )
+        )
+
+    def edit(self, connection: ConnectionInfo):
+        self.lineEdit.setText(connection.label)
+        self.lineEdit_2.setText(connection.host)
+        self.lineEdit_9.setText(str(connection.port))
+        self.lineEdit_3.setText(connection.user)
+        if not connection.password_cmd:
+            self.lineEdit_4.setText(connection.password)
+        else:
+            self.lineEdit_4.setText("")
+        self.lineEdit_5.setText(connection.password_cmd)
+        self.lineEdit_6.setText(connection.ssh_host)
+        self.lineEdit_7.setText(str(connection.ssh_port))
+        self.lineEdit_8.setText(connection.ssh_user)

@@ -9,10 +9,8 @@ from typing import List
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QApplication, QDialog
 
-from dibi.db import DbThread
 from dibi.new import Ui_main
 import dibi.resources
-# from dibi.ui import UI
 from dibi.configuration import ConfigurationParser, ConnectionInfo
 
 myloginpath_supported = False
@@ -40,15 +38,20 @@ def load_from_login_path():
 
 
 class AppWindow(QDialog):
-    def __init__(self, connections: List[ConnectionInfo]):
+    def __init__(self, config: ConfigurationParser):
         super().__init__()
+        self.config = config
         self.ui = Ui_main()
         self.ui.setupUi(self)
-        self.ui.setConnections(connections)
+        self.ui.set_connections(config.connections)
+        self.ui.change_connections.connect(self.save_config)
         self.show()
 
+    def save_config(self, connections: List[ConnectionInfo]):
+        self.config.save(connections)
 
-def dibi():
+
+def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     conf = {}
     rest = None
@@ -73,26 +76,15 @@ def dibi():
         return path.join(path.dirname(__file__), filename)
 
     app = QApplication(sys.argv)
-    for font in [
-            expand('fonts/Cabin-Bold.ttf'),
-            expand('fonts/Cabin-Medium.ttf'),
-            expand('fonts/Cabin-Regular.ttf'),
-    ]:
-        QtGui.QFontDatabase.addApplicationFont(font)
-
-    # t = DbThread()
-    # widget = UI(t, connections, config)
-    window = AppWindow(connections)
-    window.layout().setSpacing(0)
-    window.setMinimumHeight(600)
+    window = AppWindow(config)
+    # window.layout().setSpacing(0)
+    # window.setMinimumHeight(600)
     window.show()
     app.setWindowIcon(QtGui.QIcon(expand('dibi.png')))
-    # app.setStyleSheet(open(expand('styles.qss')).read())
     return_code = app.exec_()
     print('exited app')
-    # t.job.emit('disconnect', '', '', {})
     sys.exit(return_code)
 
 
 if __name__ == "__main__":
-    dibi()
+    main()
