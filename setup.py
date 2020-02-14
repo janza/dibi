@@ -25,7 +25,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'dibi = dibi.dibi:dibi',
+            'dibi = dibi.dibi:main',
         ],
     },
 )
