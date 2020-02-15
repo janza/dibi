@@ -10,10 +10,6 @@ setup(
     url='https://github.com/janza/dibi',
     license='MIT',
     packages=['dibi'],
-    include_package_data=True,
-    package_data={
-        'dibi': ['fonts/*', 'styles.qss'],
-    },
     install_requires=[
         'PyQt5',
         'mysqlclient',
