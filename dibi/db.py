@@ -112,7 +112,7 @@ class DbThread(QtCore.QObject):
             self.c = MySQLdb.connect(
                 host=connection.host if tunnel is None else '127.0.0.1',
                 user=connection.user,
-                password=connection.password,
+                password=connection.get_password(),
                 port=connection.port if tunnel is None else tunnel.local_bind_port,
                 cursorclass=MySQLdb.cursors.DictCursor
             )

@@ -3,6 +3,14 @@ from dataclasses import dataclass, field, asdict
 from configparser import ConfigParser
 import subprocess
 from os import path
+from time import time
+
+
+start = time()
+
+
+def t(label: str):
+    print(label, time() - start)
 
 
 @dataclass
@@ -17,10 +25,14 @@ class ConnectionInfo:
     ssh_port: int = 22
     ssh_user: str = ''
 
+    def get_password(self):
+        if self.password_cmd and not self.password:
+            return subprocess.check_output(self.password_cmd, shell=True).decode().strip()
+        return self.password
+
     def __post_init__(self):
         self.port = int(self.port)
-        if self.password_cmd:
-            self.password = subprocess.check_output(self.password_cmd, shell=True).decode().strip()
+        self.ssh_port = int(self.ssh_port)
 
     def toDict(self) -> Dict[str, str]:
         return asdict(self)

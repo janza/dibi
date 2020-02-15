@@ -46,6 +46,7 @@ class AppWindow(QDialog):
         self.ui.set_connections(config.connections)
         self.ui.change_connections.connect(self.save_config)
         self.show()
+        self.setWindowTitle('DiBi')
 
     def save_config(self, connections: List[ConnectionInfo]):
         self.config.save(connections)
@@ -77,12 +78,9 @@ def main():
 
     app = QApplication(sys.argv)
     window = AppWindow(config)
-    # window.layout().setSpacing(0)
-    # window.setMinimumHeight(600)
     window.show()
     app.setWindowIcon(QtGui.QIcon(expand('dibi.png')))
     return_code = app.exec_()
-    print('exited app')
     sys.exit(return_code)
 
 
