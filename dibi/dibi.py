@@ -9,7 +9,7 @@ from typing import List
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QApplication, QDialog
 
-from dibi.new import Ui_main
+from dibi.ui import Ui_main
 import dibi.resources
 from dibi.configuration import ConfigurationParser, ConnectionInfo
 

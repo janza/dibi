@@ -1,10 +1,11 @@
 import re
 import subprocess
 from os import path
-from typing import List, Dict, Iterator, Optional, Tuple, Union
+from typing import List, Dict, Iterator, Optional, Tuple, Union, Any
 from collections import deque
 import json
 
+import sqlparse
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5 import QtCore
 import MySQLdb
@@ -42,6 +43,39 @@ class SQLParser():
     def get_shell_cmd_for_pipe(query: str) -> str:
         return '-- !'.join(query.split('-- !')[1:])
 
+    def __init__(self):
+        self.variables = {}
+
+    def handle_placeholders(self, query):
+        q, = sqlparse.parse(query)
+        b = tuple(i for i in q if not i.is_whitespace)
+        name = None
+        if b[1].value == ':=':
+            name = b[0].value
+            b = b[2:]
+
+        vals = self._get_placeholders(b)
+
+        if not vals:
+            yield name, ' '.join(i for i in b)
+            return
+
+        for val in vals:
+            for inner in val:
+                yield name, ' '.join(self._replace_placeholder(i) for i in b)
+
+    def _get_placeholders(self, statements: List[sqlparse.sql.Statement]):
+        values_to_loop = []
+        for s in statements:
+            if str(s.ttype) == 'Token.Name.Placeholder':
+                values_to_loop.append(self.variables.get(s.value[1:], []))
+        return values_to_loop
+
+    def _replace_placeholder(self, statement: sqlparse.sql.Statement, name: str, value):
+        if str(statement.ttype) == 'Token.Name.Placeholder':
+            return self.variables.get(statement.value[1:], str(statement))
+        return str(statement)
+
 
 class DbThread(QtCore.QObject):
     db_list_updated = pyqtSignal(list, str)
@@ -71,6 +105,8 @@ class DbThread(QtCore.QObject):
         self.c = None
         self.is_ready = False
         self.tunnel_server = None
+        self.variables: Dict[str, List[Tuple]] = {}
+        self.sql_parser = SQLParser()
 
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
@@ -238,7 +274,9 @@ class DbThread(QtCore.QObject):
 
     def _split_queries(self, queries: str) -> Iterator[str]:
         queries = queries.split('-- ')[0]
-        for query in queries.split(';'):
+        for query in sqlparse.split(queries):
+            if query[-1] == ';':
+                query = query[:-1]
             if not query.strip():
                 continue
             query = self._prepare_query(query)
@@ -247,16 +285,31 @@ class DbThread(QtCore.QObject):
 
             yield query
 
+
     def send_results(self, text, params=None):
-        c = iter(self.run_query(text, params))
-        try:
-            first_row = next(c)
-        except StopIteration:
-            self.query_result.emit([])
-            return
-        columns = tuple(first_row.keys())
-        query_result = ([tuple(first_row.values())] +
-                        [tuple(r.values()) for r in c])
+        columns: Tuple = tuple()
+        query_result: List[Tuple] = list()
+        for query in self._split_queries(text):
+            for var_name, query in self.sql_parser.handle_placeholders(query):
+                c = iter(self.run_query(query, params))
+                try:
+                    first_row = next(c)
+                except StopIteration:
+                    self.query_result.emit([])
+                    return
+                returned_columns = tuple(first_row.keys())
+
+                pad: Tuple = tuple()
+                if columns != returned_columns:
+                    pad = len(columns) * (None,)
+                    columns += returned_columns
+
+                results = ([pad + tuple(first_row.values())] +
+                           [pad + tuple(r.values()) for r in c])
+
+                # if var_name is not None:
+                #     self.variables[var_name] = results
+                query_result += results
 
         cmd_to_pipe = SQLParser.get_shell_cmd_for_pipe(text)
         if cmd_to_pipe:
@@ -272,7 +325,11 @@ class DbThread(QtCore.QObject):
         self.query_result.emit([columns] + query_result)
 
     def get_db_list(self):
-        return [db['Database'] for db in self.run_query('show databases')]
+        return [
+            db['Database']
+            for db in self.run_query('show databases')
+            if db['Database'] not in ('information_schema', 'mysql', 'performance_schema')
+        ]
 
     def get_reference(self, column, value):
         c = self.run_query(
@@ -298,17 +355,16 @@ AND column_name = %s''',
                 row['referenced_table_name'], row['referenced_column_name']
             ), (value, ))
 
-    def run_query(self, text: str, params=None):
+    def run_query(self, query: str, params=None):
 
         if self.c is None:
             self.error.emit('No connection')
             return
 
         with self.c.cursor() as cursor:
-            for query in self._split_queries(text):
-                self.running_query.emit(True)
-                self.execute.emit(query, params or ())
-                cursor.execute(query, params)
-                self.running_query.emit(False)
+            self.running_query.emit(True)
+            self.execute.emit(query, params or ())
+            cursor.execute(query, params)
+            self.running_query.emit(False)
 
             return cursor

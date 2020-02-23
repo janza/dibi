@@ -39,13 +39,13 @@ class Ui_main(QtCore.QObject):
                                 "alignment: left;\n"
                                 "}\n"
                                 "\n"
-                                "#tabs QTabBar::close-button {\n"
-                                " left: -10px;\n"
-                                "    subcontrol-origin: content;\n"
-                                "    image: url(:/icons/rollback.png);\n"
-                                "width: 14px;\n"
-                                "height: 14px;\n"
-                                "}\n"
+                                # "#tabs QTabBar::close-button {\n"
+                                # " left: -10px;\n"
+                                # "    subcontrol-origin: content;\n"
+                                # "    image: url(:/icons/rollback.png);\n"
+                                # "width: 14px;\n"
+                                # "height: 14px;\n"
+                                # "}\n"
                                 "\n"
                                 "#tabs QTabBar::tab {\n"
                                 "border-top-left-radius: 4px;\n"
@@ -87,17 +87,9 @@ class Ui_main(QtCore.QObject):
         self.new_connection.setObjectName("new_connection")
         self.gridLayout = QtWidgets.QGridLayout(self.new_connection)
         self.gridLayout.setSizeConstraint(QtWidgets.QLayout.SetMaximumSize)
-        self.gridLayout.setContentsMargins(-1, -1, 9, 9)
-        self.gridLayout.setHorizontalSpacing(8)
+        self.gridLayout.setContentsMargins(-1, -1, -1, -1)
         self.gridLayout.setObjectName("gridLayout")
-        spacerItem = QtWidgets.QSpacerItem(20, 23, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem, 5, 1, 1, 1)
-        spacerItem1 = QtWidgets.QSpacerItem(137, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem1, 2, 3, 1, 1)
-        spacerItem2 = QtWidgets.QSpacerItem(138, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem2, 1, 0, 4, 1)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem3, 0, 1, 1, 1)
+
         self.connection_list = QtWidgets.QFrame(self.new_connection)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -153,15 +145,24 @@ class Ui_main(QtCore.QObject):
         # TODO
         self.connection_list_widgets = QtWidgets.QWidget()
         self.verticalLayout.addWidget(self.connection_list_widgets)
-        self.gridLayout.addWidget(self.connection_list, 1, 2, 2, 1)
         self.connection_edit_frame = ConnectionEdit(self.new_connection)
         self.connection_edit_frame.add_connection.connect(self.new_connection_added)
-        self.gridLayout.addWidget(self.connection_edit_frame, 1, 1, 4, 1)
-        spacerItem5 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem5, 3, 2, 1, 1)
-        self.tabs.addTab(self.new_connection, "")
-        # TODO
 
+        self.gridLayout.setColumnStretch(0, 2)
+        self.gridLayout.setColumnStretch(3, 2)
+        self.gridLayout.setRowStretch(0, 2)
+        self.gridLayout.setRowStretch(2, 2)
+
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(200, 200, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 3, 1)
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(200, 200, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 2, 0, 3, 1)
+
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(200, 200, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 1, 0, 1, 2)
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(200, 200, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 1, 3, 1, 2)
+
+        self.gridLayout.addWidget(self.connection_list, 1, 2, 1, 1, QtCore.Qt.AlignTop)
+        self.gridLayout.addWidget(self.connection_edit_frame, 1, 1, 1, 1, QtCore.Qt.AlignTop)
+
+        self.tabs.addTab(self.new_connection, "")
         self.horizontalLayout.addWidget(self.tabs)
         self.actionbla = QtWidgets.QAction(main)
         self.actionbla.setCheckable(True)
@@ -513,16 +514,18 @@ class ConnectionTab(QtWidgets.QWidget):
         self.dataviews.addWidget(self.listView)
         self.pushButton_2 = QtWidgets.QPushButton(self.tables_and_buttons)
         self.pushButton_2.setStyleSheet("")
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/icons/commit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.pushButton_2.setIcon(icon2)
+        # icon2 = QtGui.QIcon()
+        # icon2.addPixmap(QtGui.QPixmap(":/icons/commit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        # self.pushButton_2.setIcon(icon2)
+        self.pushButton_2.setStyleSheet('font-weight: bold')
         self.pushButton_2.setObjectName("pushButton_2")
         self.pushButton_2.clicked.connect(self.on_commit)
         self.dataviews.addWidget(self.pushButton_2)
         self.pushButton_3 = QtWidgets.QPushButton(self.tables_and_buttons)
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/icons/rollback.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.pushButton_3.setIcon(icon3)
+        # icon3 = QtGui.QIcon()
+        # icon3.addPixmap(QtGui.QPixmap(":/icons/rollback.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        # self.pushButton_3.setIcon(icon3)
+        self.pushButton_3.setStyleSheet('font-weight: bold')
         self.pushButton_3.setObjectName("pushButton_3")
         self.pushButton_3.clicked.connect(self.on_rollback)
         self.dataviews.addWidget(self.pushButton_3)
@@ -554,7 +557,7 @@ class ConnectionTab(QtWidgets.QWidget):
         self.textBrowser.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setFamily("Monospace")
-        font.setPointSize(8)
+        font.setPointSize(10)
         self.textBrowser.setFont(font)
         self.textBrowser.setStyleSheet("background: rgba(250,255,252,1);\n"
                                        "font-size: 8pt;\n"
@@ -593,7 +596,7 @@ class InputBox(QtWidgets.QPlainTextEdit):
         self.setBaseSize(QtCore.QSize(0, 30))
         font = QtGui.QFont()
         font.setFamily("monospace")
-        font.setPointSize(8)
+        font.setPointSize(10)
         self.setFont(font)
         self.setStyleSheet("QPlainTextEdit {\n"
                            "font-family: monospace;\n"
@@ -819,7 +822,7 @@ class TableWidget(QtWidgets.QTableWidget):
         self.setSizePolicy(sizePolicy)
         self.setMinimumSize(QtCore.QSize(400, 300))
         font = QtGui.QFont()
-        font.setPointSize(8)
+        font.setPointSize(10)
         self.setFont(font)
         self.setStyleSheet("QTableWidget {\n"
                            "    background: rgba(255,255,255,1);\n"
