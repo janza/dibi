@@ -14,8 +14,9 @@ class SQLParserTest(unittest.TestCase):
 
     def test_handle_placeholders_stores(self):
         parser = SQLParser()
-        query = next(parser.handle_placeholders('result := select * from foo.bar'))
+        put_result, query = next(parser.handle_placeholders('result := select * from foo.bar'))
         self.assertEqual(query, 'select * from foo.bar')
+        self.assertEqual(put_result, None)
         self.assertEqual(parser.variables, {
             'result': 'select * from foo.bar'
         })
@@ -24,7 +25,9 @@ class SQLParserTest(unittest.TestCase):
         parser = SQLParser()
         next(parser.handle_placeholders('result := select "bla"'))
         result = parser.handle_placeholders('select * from foo.$result')
-        query = result.send(None)
-        self.assertEqual(query, 'select "bla"')
-        query = result.send('bla')
-        self.assertEqual(query, 'select * from foo. bla')
+        put_result, _ = next(result)
+        put_result(['bar', 'baz'])
+        _, query = next(result)
+        self.assertEqual(query, 'select * from foo. bar')
+        _, query = next(result)
+        self.assertEqual(query, 'select * from foo. baz')

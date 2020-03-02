@@ -56,20 +56,22 @@ class SQLParser():
         placeholders = self._get_placeholders(b)
 
         if not placeholders:
-            yield self._token_str(b)
+            yield None, self._token_str(b)
             return
 
         cache: Dict[str, List[Any]] = {}
 
         for placeholder in placeholders:
             if placeholder not in cache and placeholder in self.variables:
-                result = yield self.variables[placeholder]
-                cache[placeholder] = result
+                def put_result(results: List[Any]):
+                    cache[placeholder] = results
+                yield put_result, self.variables[placeholder]
 
-        for key, value in cache.items():
-            yield ' '.join(
-                str(self._replace_placeholder(i, key, value))
-                for i in b)
+        for key, values in cache.items():
+            for value in values:
+                yield None, ' '.join(
+                    str(self._replace_placeholder(i, key, value))
+                    for i in b)
 
     def _token_str(self, statements: List[sqlparse.sql.Statement]) -> str:
         return ' '.join(str(t) for t in statements)
@@ -299,8 +301,12 @@ class DbThread(QtCore.QObject):
         columns: Tuple = tuple()
         query_result: List[Tuple] = list()
         for query in self._split_queries(text):
-            for query in self.sql_parser.handle_placeholders(str(query)):
+            for put_result, query in self.sql_parser.handle_placeholders(str(query)):
                 c = iter(self.run_query(query, params))
+                if put_result is not None:
+                    put_result([next(iter(r.values())) for r in c if r])
+                    continue
+
                 try:
                     first_row = next(c)
                 except StopIteration:
@@ -313,8 +319,10 @@ class DbThread(QtCore.QObject):
                     pad = len(columns) * (None,)
                     columns += returned_columns
 
-                results = ([pad + tuple(first_row.values())] +
-                           [pad + tuple(r.values()) for r in c])
+                first_row_values = tuple(first_row.values())
+                rest_values = [tuple(r.values()) for r in c]
+                results = ([pad + first_row_values] +
+                           [pad + r for r in rest_values])
 
                 query_result += results
 
