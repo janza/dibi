@@ -7,10 +7,9 @@ from os import path
 
 from typing import List
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication, QWidget
 
 from dibi.ui import Ui_main
-import dibi.resources
 from dibi.configuration import ConfigurationParser, ConnectionInfo
 
 myloginpath_supported = False
@@ -37,7 +36,7 @@ def load_from_login_path():
     return {}, rest
 
 
-class AppWindow(QDialog):
+class AppWindow(QWidget):
     def __init__(self, config: ConfigurationParser):
         super().__init__()
         self.config = config

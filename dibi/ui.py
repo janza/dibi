@@ -566,7 +566,7 @@ class ConnectionTab(QtWidgets.QWidget):
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.textBrowser = QtWidgets.QTextBrowser(self.layoutWidget1)
-        self.textBrowser.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        # self.textBrowser.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setFamily("Monospace")
         font.setPointSize(10)
@@ -581,6 +581,10 @@ class ConnectionTab(QtWidgets.QWidget):
         self.verticalLayout_2.addWidget(self.textBrowser)
         self.textEdit = InputBox(self.layoutWidget1)
         self.verticalLayout_2.addWidget(self.textEdit)
+
+        self.main_splitter.setStretchFactor(0, 4)
+        self.main_splitter.setStretchFactor(1, 1)
+
         self.horizontalLayout_2.addWidget(self.main_splitter)
 
         self.pushButton_2.setText('Commit changes')
