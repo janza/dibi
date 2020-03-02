@@ -46,34 +46,44 @@ class SQLParser():
     def __init__(self):
         self.variables = {}
 
-    def handle_placeholders(self, query):
+    def handle_placeholders(self, query: str):
         q, = sqlparse.parse(query)
-        b = tuple(i for i in q if not i.is_whitespace)
-        name = None
-        if b[1].value == ':=':
-            name = b[0].value
+        b = [i for i in q if not i.is_whitespace]
+        if len(b) > 2 and b[1].value == ':=':
+            self.variables[b[0].value] = self._token_str(b[2:])
             b = b[2:]
 
-        vals = self._get_placeholders(b)
+        placeholders = self._get_placeholders(b)
 
-        if not vals:
-            yield name, ' '.join(i for i in b)
+        if not placeholders:
+            yield self._token_str(b)
             return
 
-        for val in vals:
-            for inner in val:
-                yield name, ' '.join(self._replace_placeholder(i) for i in b)
+        cache: Dict[str, List[Any]] = {}
+
+        for placeholder in placeholders:
+            if placeholder not in cache and placeholder in self.variables:
+                result = yield self.variables[placeholder]
+                cache[placeholder] = result
+
+        for key, value in cache.items():
+            yield ' '.join(
+                str(self._replace_placeholder(i, key, value))
+                for i in b)
+
+    def _token_str(self, statements: List[sqlparse.sql.Statement]) -> str:
+        return ' '.join(str(t) for t in statements)
 
     def _get_placeholders(self, statements: List[sqlparse.sql.Statement]):
-        values_to_loop = []
+        r = []
         for s in statements:
-            if str(s.ttype) == 'Token.Name.Placeholder':
-                values_to_loop.append(self.variables.get(s.value[1:], []))
-        return values_to_loop
+            if str(s.ttype) == 'Token.Name.Placeholder' and s.value[1:] in self.variables.keys():
+                r.append(s.value[1:])
+        return r
 
-    def _replace_placeholder(self, statement: sqlparse.sql.Statement, name: str, value):
-        if str(statement.ttype) == 'Token.Name.Placeholder':
-            return self.variables.get(statement.value[1:], str(statement))
+    def _replace_placeholder(self, statement: sqlparse.sql.Statement, name: str, value: Any):
+        if str(statement.ttype) == 'Token.Name.Placeholder' and statement.value[1:] == name:
+            return value
         return str(statement)
 
 
@@ -273,7 +283,7 @@ class DbThread(QtCore.QObject):
         return query
 
     def _split_queries(self, queries: str) -> Iterator[str]:
-        queries = queries.split('-- ')[0]
+        # queries = queries.split('-- ')[0]
         for query in sqlparse.split(queries):
             if query[-1] == ';':
                 query = query[:-1]
@@ -285,12 +295,11 @@ class DbThread(QtCore.QObject):
 
             yield query
 
-
     def send_results(self, text, params=None):
         columns: Tuple = tuple()
         query_result: List[Tuple] = list()
         for query in self._split_queries(text):
-            for var_name, query in self.sql_parser.handle_placeholders(query):
+            for query in self.sql_parser.handle_placeholders(str(query)):
                 c = iter(self.run_query(query, params))
                 try:
                     first_row = next(c)
@@ -307,8 +316,6 @@ class DbThread(QtCore.QObject):
                 results = ([pad + tuple(first_row.values())] +
                            [pad + tuple(r.values()) for r in c])
 
-                # if var_name is not None:
-                #     self.variables[var_name] = results
                 query_result += results
 
         cmd_to_pipe = SQLParser.get_shell_cmd_for_pipe(text)

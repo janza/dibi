@@ -17,9 +17,9 @@ class Ui_main(QtCore.QObject):
     def setupUi(self, main):
         main.setObjectName("main")
         main.resize(734, 504)
-        font = QtGui.QFont()
-        font.setFamily("Inter")
-        main.setFont(font)
+        # font = QtGui.QFont()
+        # font.setFamily("Inter")
+        # main.setFont(font)
         main.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         main.setStyleSheet("#main {\n"
                            "background: #fff\n"
@@ -173,6 +173,7 @@ class Ui_main(QtCore.QObject):
         QtCore.QMetaObject.connectSlotsByName(main)
         self.connection_list_layout = None
         self._connection_to_remove = None
+        self.new_connection.installEventFilter(self)
 
     def retranslateUi(self, main):
         main.setWindowTitle(_translate("main", "Form"))
@@ -209,9 +210,9 @@ class Ui_main(QtCore.QObject):
             except TypeError:
                 pass
 
-        for connection in self._connections:
+        for idx, connection in enumerate(self._connections):
             widget = ConnectionListLabel(parent=self.connection_list_widgets)
-            widget.renderConnectionLabel(connection)
+            widget.renderConnectionLabel(idx, connection)
             widget.open_connection.connect(self.openConnection)
             widget.edited.connect(self.editConnection)
             widget.removed.connect(self.removeConnection)
@@ -247,29 +248,47 @@ class Ui_main(QtCore.QObject):
         connection_tab.focus_input()
         self.tabs.tabCloseRequested
 
+    def eventFilter(self, source, event: QtCore.QEvent):
+        if event.type() != QtCore.QEvent.KeyPress:
+            return QtWidgets.QMainWindow.eventFilter(self, source, event)
+
+        key = event.key()
+        is_ctrl = QtGui.QGuiApplication.queryKeyboardModifiers() == QtCore.Qt.ControlModifier
+        if not is_ctrl:
+            return QtWidgets.QMainWindow.eventFilter(self, source, event)
+
+        try:
+            self.openConnection(self._connections[int(key) - 49])
+        except KeyError:
+            pass
+
+        return False
+
 
 class ConnectionListLabel(QtWidgets.QWidget):
     open_connection = QtCore.pyqtSignal(ConnectionInfo)
     removed = QtCore.pyqtSignal(ConnectionInfo)
     edited = QtCore.pyqtSignal(ConnectionInfo)
 
-    def renderConnectionLabel(self, connection: ConnectionInfo):
+    def renderConnectionLabel(self, idx: int, connection: ConnectionInfo):
         self.connection = QtWidgets.QHBoxLayout(self)
         self.connection.setContentsMargins(0, 0, 0, 0)
-        self.connection.setSpacing(0)
+        self.connection.setSpacing(5)
         self.connection.setObjectName("connection")
+
+        self.connection.addWidget(QtWidgets.QLabel(str(idx + 1), parent=self.parent()))
         self.connection_label = QtWidgets.QPushButton(self.parent())
         self.connection_label.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.connection_label.setObjectName("connection_label")
         self.connection_label.setText(connection.label)
-        self.connection.addWidget(self.connection_label)
+        # self.connection_label.setFlat(True)
+        self.connection_label.setStyleSheet('QPushButton { padding: 5px 8px; text-align: left }')
+        self.connection.addWidget(self.connection_label, 2)
         self.edit = QtWidgets.QToolButton(self.parent())
         self.edit.setMinimumSize(QtCore.QSize(12, 12))
         self.edit.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.edit.setStyleSheet("border: none")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/edit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.edit.setIcon(icon)
+        self.edit.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_FileDialogInfoView))
         self.edit.setIconSize(QtCore.QSize(12, 12))
         self.edit.setObjectName("edit")
         self.connection.addWidget(self.edit)
@@ -277,15 +296,13 @@ class ConnectionListLabel(QtWidgets.QWidget):
         self.close.setMinimumSize(QtCore.QSize(12, 12))
         self.close.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.close.setStyleSheet("border:none")
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/icons/close.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.close.setIcon(icon1)
+        self.close.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_TrashIcon))
         self.close.setIconSize(QtCore.QSize(12, 12))
         self.close.setObjectName("close")
         self.connection.addWidget(self.close)
 
-        self.edit.setText('...')
-        self.close.setText('...')
+        self.edit.setText('Edit')
+        self.close.setText('Close')
 
         self.connection_label.clicked.connect(lambda _: self.open_connection.emit(connection))
         self.edit.clicked.connect(lambda _: self.edited.emit(connection))
@@ -423,9 +440,11 @@ class ConnectionTab(QtWidgets.QWidget):
 
     def on_commit(self):
         self.t.job.emit('commit', '', '', {})
+        self.textBrowser.append('Commited')
 
     def on_rollback(self):
         self.t.job.emit('rollback', '', '', {})
+        self.textBrowser.append('Rolled back')
 
     def request_tables(self, db_name: str):
         self.t.job.emit('table_list', db_name, '', {})
@@ -443,14 +462,7 @@ class ConnectionTab(QtWidgets.QWidget):
         self.horizontalLayout_2.setSpacing(6)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.main_splitter = QtWidgets.QSplitter(self)
-        self.main_splitter.setStyleSheet("QSplitter::handle {\n"
-                                         "    image: none;\n"
-                                         "}\n"
-                                         "\n"
-                                         "QSplitter::handle:pressed {\n"
-                                         "    image: none;\n"
-                                         "}")
-        self.main_splitter.setLineWidth(0)
+        self.main_splitter.setLineWidth(2)
         self.main_splitter.setOrientation(QtCore.Qt.Vertical)
         self.main_splitter.setOpaqueResize(True)
         self.main_splitter.setChildrenCollapsible(True)
@@ -516,7 +528,7 @@ class ConnectionTab(QtWidgets.QWidget):
         self.pushButton_2.setStyleSheet("")
         # icon2 = QtGui.QIcon()
         # icon2.addPixmap(QtGui.QPixmap(":/icons/commit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        # self.pushButton_2.setIcon(icon2)
+        self.pushButton_2.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton))
         self.pushButton_2.setStyleSheet('font-weight: bold')
         self.pushButton_2.setObjectName("pushButton_2")
         self.pushButton_2.clicked.connect(self.on_commit)
@@ -524,7 +536,7 @@ class ConnectionTab(QtWidgets.QWidget):
         self.pushButton_3 = QtWidgets.QPushButton(self.tables_and_buttons)
         # icon3 = QtGui.QIcon()
         # icon3.addPixmap(QtGui.QPixmap(":/icons/rollback.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        # self.pushButton_3.setIcon(icon3)
+        self.pushButton_3.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_TrashIcon))
         self.pushButton_3.setStyleSheet('font-weight: bold')
         self.pushButton_3.setObjectName("pushButton_3")
         self.pushButton_3.clicked.connect(self.on_rollback)
@@ -571,7 +583,7 @@ class ConnectionTab(QtWidgets.QWidget):
         self.verticalLayout_2.addWidget(self.textEdit)
         self.horizontalLayout_2.addWidget(self.main_splitter)
 
-        self.pushButton_2.setText('Commit')
+        self.pushButton_2.setText('Commit changes')
         self.pushButton_3.setText('Rollback')
         self.textBrowser.setHtml('')
         self.textEdit.setPlainText('')
@@ -1038,6 +1050,7 @@ class ConnectionEdit(QtWidgets.QFrame):
         self.lineEdit = QtWidgets.QLineEdit(self)
         self.lineEdit.setText("")
         self.lineEdit.setObjectName("lineEdit")
+        self.lineEdit.setMinimumSize(QtCore.QSize(250, 0))
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.lineEdit)
         self.label_2 = QtWidgets.QLabel(self)
         font = QtGui.QFont()
