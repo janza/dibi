@@ -259,7 +259,7 @@ class Ui_main(QtCore.QObject):
 
         try:
             self.openConnection(self._connections[int(key) - 49])
-        except KeyError:
+        except IndexError:
             pass
 
         return False
