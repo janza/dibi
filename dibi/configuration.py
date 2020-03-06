@@ -1,9 +1,18 @@
 from typing import Dict, List
 from dataclasses import dataclass, field, asdict
-from configparser import ConfigParser
+from configparser import ConfigParser, NoSectionError
+import argparse
 import subprocess
 from os import path
 from time import time
+
+
+myloginpath_supported = False
+try:
+    import myloginpath
+    myloginpath_supported = True
+except Exception:
+    pass
 
 
 start = time()
@@ -41,6 +50,22 @@ class ConnectionInfo:
         return f'{self.host}:{self.port} {self.user} through {self.ssh_user}@{self.ssh_host}:{self.ssh_port}'
 
 
+def load_from_login_path():
+    p = argparse.ArgumentParser()
+    p.add_argument('--login-path')
+    args, rest = p.parse_known_args()
+
+    if args.login_path:
+        try:
+            return myloginpath.parse(args.login_path), rest
+        except NoSectionError as err:
+            print(err)
+        except FileNotFoundError as err:
+            print(err)
+
+    return {}, rest
+
+
 class ConfigurationParser():
     filepath: str
 
@@ -53,6 +78,24 @@ class ConfigurationParser():
     def connections(self) -> List[ConnectionInfo]:
         iniconfig = ConfigParser()
         iniconfig.read(self.filepath)
+
+        conf = {}
+        rest = None
+        if myloginpath_supported:
+            conf, rest = load_from_login_path()
+
+        p = argparse.ArgumentParser()
+        p.add_argument('--host')
+        p.add_argument('--user', '-u')
+        p.add_argument('--password', '-p')
+        p.add_argument('--port', '-P', type=int, default=3306)
+        p.set_defaults(**conf)
+        args = p.parse_args(rest)
+
+        args_connection = None
+        if args.host is not None:
+            args_connection = ConnectionInfo(label='default', **vars(args))
+
         return [
             ConnectionInfo(
                 section,
@@ -66,11 +109,14 @@ class ConfigurationParser():
                 iniconfig[section].get('ssh_user', ''),
             )
             for section in iniconfig.sections()
-        ]
+        ] + ([args_connection] if args_connection else [])
 
     def save(self, connections: List[ConnectionInfo]):
         iniconfig = ConfigParser()
         for connection in connections:
+            if connection.label == 'default':
+                continue
+
             iniconfig[connection.label] = {
                 'host': connection.host,
                 'port': str(connection.port),
