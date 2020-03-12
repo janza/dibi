@@ -34,11 +34,14 @@ def main():
         return path.join(path.dirname(__file__), filename)
 
     app = QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon(expand('dibi.png')))
     window = AppWindow(config)
     window.show()
-    app.setWindowIcon(QtGui.QIcon(expand('dibi.png')))
+    print('Running')
     return_code = app.exec_()
+    print('return code', return_code)
     sys.exit(return_code)
+    print('OUt of main')
 
 
 if __name__ == "__main__":

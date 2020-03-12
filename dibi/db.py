@@ -119,6 +119,7 @@ class DbThread(QtCore.QObject):
         self.tunnel_server = None
         self.variables: Dict[str, List[Tuple]] = {}
         self.sql_parser = SQLParser()
+        self.destroyed.connect(self.disconnect)
 
     @pyqtSlot(str, str, int, dict)
     @pyqtSlot(str, str, str, dict)
@@ -142,26 +143,24 @@ class DbThread(QtCore.QObject):
         self.running_query.emit(True)
         self.disconnect()
         self.info.emit(str(f'Connecting to: {connection}...'))
-        tunnel = None
         if connection.ssh_host and connection.ssh_user:
-            tunnel = sshtunnel.SSHTunnelForwarder(
+            self.tunnel_server = sshtunnel.SSHTunnelForwarder(
                 (connection.ssh_host, connection.ssh_port),
                 ssh_username=connection.ssh_user,
                 ssh_pkey=path.expanduser('~/.ssh/id_rsa'),
                 remote_bind_address=(connection.host, connection.port))
-            self.tunnel_server = tunnel
             try:
-                tunnel.start()
+                self.tunnel_server.start()
             except Exception as err:
                 self.error.emit(str(err))
                 return
 
         try:
             self.c = MySQLdb.connect(
-                host=connection.host if tunnel is None else '127.0.0.1',
+                host=connection.host if self.tunnel_server is None else '127.0.0.1',
                 user=connection.user,
                 password=connection.get_password(),
-                port=connection.port if tunnel is None else tunnel.local_bind_port,
+                port=connection.port if self.tunnel_server is None else self.tunnel_server.local_bind_port,
                 cursorclass=MySQLdb.cursors.DictCursor
             )
         except Exception as err:
@@ -174,13 +173,19 @@ class DbThread(QtCore.QObject):
         self.run_query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED')
 
     def disconnect(self):
+        print('Disconnecting', self.connection)
+        print(self.c)
         if self.c is not None:
+            print('Closing db connection')
             self.c.close()
             print('Closed db connection')
 
         if self.tunnel_server is not None:
+            print('Closing tunnel')
             self.tunnel_server.stop()
             print('Closed tunnel')
+
+        print('Disconnected')
 
     def process(self, request_type: str, params: str, extra, more) -> None:
         if request_type == 'disconnect':

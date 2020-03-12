@@ -246,7 +246,6 @@ class Ui_main(QtCore.QObject):
         self.tabs.setCurrentIndex(new_tab_index)
         connection_tab.open_connection(connection)
         connection_tab.focus_input()
-        self.tabs.tabCloseRequested
 
     def eventFilter(self, source, event: QtCore.QEvent):
         if event.type() != QtCore.QEvent.KeyPress:
@@ -328,7 +327,10 @@ class ConnectionTab(QtWidgets.QWidget):
     editing_column: Optional[str] = None
 
     def close(self):
+        print('closing')
         self.t.job.emit('disconnect', '', '', {})
+        self.thread.quit()
+        self.thread.wait()
 
     def on_dbs_list(self, dbs: List[str]):
         self.comboBox.clear()
@@ -405,10 +407,14 @@ class ConnectionTab(QtWidgets.QWidget):
         self.t.table_list_updated.connect(self.on_tables_list)
         self.t.running_query.connect(self.on_query_op)
         t = QtCore.QThread()
+        t.setObjectName(f'Connection thread: {connection}')
         self.t.moveToThread(t)
+        t.finished.connect(self.t.deleteLater)
         t.started.connect(self.t.longRunning)
+        # t.destroyed.connect(self.destroyed)
         t.start()
-        self._t = t
+        self.thread = t
+        self.destroyed.connect(self.close)
 
     def on_ready_to_connect(self):
         self.t.job.emit('connect', '', '', self.connection.toDict())
@@ -608,7 +614,7 @@ class InputBox(QtWidgets.QPlainTextEdit):
 
     def __init__(self, parent: QtCore.QObject):
         super().__init__(parent)
-        self.setMaximumSize(QtCore.QSize(16777215, 24))
+        self.setMaximumSize(QtCore.QSize(16777215, 300))
         self.setBaseSize(QtCore.QSize(0, 30))
         font = QtGui.QFont()
         font.setFamily("monospace")
