@@ -1,4 +1,4 @@
 mysqlclient==1.4.6
-PyQt5==5.14.0
+PyQt5
 sshtunnel==0.1.5
 sqlparse==0.3.0
